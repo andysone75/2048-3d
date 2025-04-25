@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(Wasm)
+project(city-2048)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,17 +13,11 @@ target_link_libraries(index PRIVATE raylib)
 if (EMSCRIPTEN)
     set_target_properties(index PROPERTIES SUFFIX ".html")
     set(EMSCRIPTEN_PRELOAD_DIR "${CMAKE_SOURCE_DIR}/shaders")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --preload-file ${EMSCRIPTEN_PRELOAD_DIR}@/shaders")
-
-    target_compile_options(index PRIVATE
-        -sUSE_GLFW=3
-        -sASYNCIFY
-        -sALLOW_MEMORY_GROWTH=1
-    )
-
     target_link_options(index PRIVATE
-        -sUSE_GLFW=3
-        -sASYNCIFY
-        -sALLOW_MEMORY_GROWTH=1
+        "-sUSE_GLFW=3"
+        "-sASYNCIFY"
+        "-sALLOW_MEMORY_GROWTH=1"
+        "--preload-file=${EMSCRIPTEN_PRELOAD_DIR}@/shaders"
+        "--shell-file=${CMAKE_SOURCE_DIR}/index.html"
     )
 endif()

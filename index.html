@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Raylib App</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: black;
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background: black;
+        }
+
+        @media (orientation: landscape) {
+            canvas {
+                height: 100vh;
+                width: auto;
+                aspect-ratio: 9 / 16;
+            }
+        }
+
+        @media (orientation: portrait) {
+            canvas {
+                width: 100vw;
+                height: 100vh;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="0"></canvas>
+
+    <script>
+        var Module = {
+            canvas: document.getElementById('canvas')
+        };
+
+        const canvas = Module.canvas;
+        const portrait = window.innerHeight > window.innerWidth;
+
+        if (portrait) {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        } else {
+            const height = window.innerHeight;
+            const width = Math.floor(height * 9 / 16);
+            canvas.width = width;
+            canvas.height = height;
+        }
+    </script>
+
+    {{{ SCRIPT }}}
+</body>
+</html>

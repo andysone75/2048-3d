@@ -1,12 +1,15 @@
 #include "raylib.h"
 #include "raymath.h"
+#include <emscripten/html5.h>
 
 int main() {
-    InitWindow(800, 600, "Hello, raylib!");
+    int canvasW = 0, canvasH = 0;
+    emscripten_get_canvas_element_size("#canvas", &canvasW, &canvasH);
+    InitWindow(canvasW, canvasH, "Hello, raylib!");
     SetTargetFPS(60);
 
     Camera3D camera = { 0 };
-    camera.position = { 4.0f, 4.0f, 4.0f };
+    camera.position = { 4.0f, 5.0f, 8.0f };
     camera.target = { 0.0f, 0.0f, 0.0f };
     camera.up = { 0.0f, 1.0f, 0.0f };
     camera.fovy = 45.0f;
