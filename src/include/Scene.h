@@ -17,12 +17,13 @@ public:
     void initialize();
     void unload();
 
-    SceneObject* createObject(string modelId);
-    SceneObject* createObject(string modelId, Vector3 position);
+    int createObject(string modelId);
+    int createObject(string modelId, Vector3 position);
     void addModel(string id, Model model, string shaderId);
     void addModel(string id, Model model, string shaderId, Vector3 scale);
     void addShader(string id, const string& vsPath, const string& fsPath);
 
+    SceneObject& getObject(int index);
     const vector<Shader>& getShaders() const;
     const vector<SceneObject>& getObjects() const;
 

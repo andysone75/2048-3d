@@ -6,16 +6,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS src/cpp/*.cpp)
 add_executable(index src/main.cpp ${SRC_FILES})
-
-target_include_directories(index PRIVATE
-    ${CMAKE_SOURCE_DIR}/src/include
-    ${CMAKE_SOURCE_DIR}/raylib/include
-)
-
-target_link_directories(index PRIVATE ${CMAKE_SOURCE_DIR}/raylib/lib)
-target_link_libraries(index PRIVATE raylib)
+target_include_directories(index PRIVATE ${CMAKE_SOURCE_DIR}/src/include)
 
 if (EMSCRIPTEN)
+    target_include_directories(index PRIVATE ${CMAKE_SOURCE_DIR}/raylib/include)
+    target_link_directories(index PRIVATE ${CMAKE_SOURCE_DIR}/raylib/lib)
+    target_link_libraries(index PRIVATE raylib)
+
     set_target_properties(index PROPERTIES SUFFIX ".html")
     set(EMSCRIPTEN_PRELOAD_DIR "${CMAKE_SOURCE_DIR}/shaders")
     target_link_options(index PRIVATE
@@ -24,5 +21,19 @@ if (EMSCRIPTEN)
         "-sALLOW_MEMORY_GROWTH=1"
         "--preload-file=${EMSCRIPTEN_PRELOAD_DIR}@/shaders"
         "--shell-file=${CMAKE_SOURCE_DIR}/index.html"
+    )
+else()
+    target_include_directories(index PRIVATE ${CMAKE_SOURCE_DIR}/raylib-win/include)
+    target_link_directories(index PRIVATE ${CMAKE_SOURCE_DIR}/raylib-win/lib)
+    target_link_libraries(index PRIVATE raylib)
+endif()
+
+if(WIN32)
+    target_link_libraries(index PRIVATE opengl32 gdi32 winmm)
+
+    add_custom_command(TARGET index POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/shaders"
+            "$<TARGET_FILE_DIR:index>/shaders"
     )
 endif()

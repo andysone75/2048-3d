@@ -27,14 +27,14 @@ void Scene::initialize() {
     createObject(GRID_ID, {2 * shift, 0, 2 * shift});
     createObject(GRID_ID, {3 * shift, 0, 2 * shift});
     createObject(GRID_ID, {0 * shift, 0, 3 * shift});
-    createObject(GRID_ID, {1 * shift, 0, 3 * shift});
+    createObject(GRID_ID, {1 * shift, 0, 3 * shift});  
     createObject(GRID_ID, {2 * shift, 0, 3 * shift});
     createObject(GRID_ID, {3 * shift, 0, 3 * shift});
 }
 
 void Scene::unload() {
     for (const Model& model : models) {
-        UnloadModel(model);
+W        UnloadModel(model);
     }
 
     for (const Shader& shader : shaders) {
@@ -50,7 +50,7 @@ const vector<Shader>& Scene::getShaders() const {
     return shaders;
 }
 
-SceneObject* Scene::createObject(string modelId) {
+int Scene::createObject(string modelId) {
     int modelIndex = -1;
 
     for (size_t i = 0; i < modelIds.size(); i++)
@@ -64,13 +64,18 @@ SceneObject* Scene::createObject(string modelId) {
     SceneObject object;
     object.model = models[modelIndex];
     objects.push_back(object);
-    return &objects.back();
+    return objects.size() - 1;
 }
 
-SceneObject* Scene::createObject(string modelId, Vector3 position) {
-    SceneObject* object = createObject(modelId);
-    object->position = position;
-    return object;
+int Scene::createObject(string modelId, Vector3 position) {
+    int index = createObject(modelId);
+    SceneObject& object = getObject(index);
+    object.position = position;
+    return index;
+}
+
+SceneObject& Scene::getObject(int index) {
+    return objects[index];
 }
 
 void Scene::addModel(string id, Model model, string shaderId, Vector3 scale) {

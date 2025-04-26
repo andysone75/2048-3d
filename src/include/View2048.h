@@ -4,23 +4,32 @@
 #include "Scene.h"
 #include <stack>
 
+const float ANIMATION_TIME = .25f;
+
 struct View2048_Object {
     int level;
-    SceneObject* sceneObject = nullptr;
+    int row, col;
+    int sceneObject = -1;
 };
 
 class View2048 {
 public:
     View2048(const Game2048& game, Scene& scene);
     void initialize();
-    void update();
+    void update(float dt);
+    void updateBoardFast();
+    void updateBoard();
 
 private:
     const Game2048& game;
     Scene& scene;
-    std::vector<std::stack<View2048_Object>*> objectsPools;
-    std::stack<View2048_Object> placedObjects;
+    float animationTimer;
+    std::vector<std::stack<int>> objectsPools;
+    std::vector<View2048_Object> placedObjects;
+    std::vector<int> animationTargets;
+    std::vector<Vector3> animationStartPositions;
+    std::vector<Vector3> animationTargetPositions;
 
     void poolObjects();
-    void placeObject(int level, int row, int col);
+    View2048_Object placeObject(int level, int row, int col);
 };
