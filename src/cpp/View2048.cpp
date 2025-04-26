@@ -1,18 +1,43 @@
 #include "View2048.h"
 #include "Utils.h"
 #include <cmath>
+#include "raymath.h"
 
 View2048::View2048(const Game2048& game, Scene& scene)
     : game(game), scene(scene) {}
 
+#include <iostream>
+
 void View2048::initialize() {
-    Mesh cubeMesh = GenMeshCube(1.0f, 1.0f, 1.0f);
-    Model cubeModel = LoadModelFromMesh(cubeMesh);
-    scene.addModel("cube_0", cubeModel, "grid_cell");
-    scene.addModel("cube_1", cubeModel, "grid_cell", {1,2,1});
-    scene.addModel("cube_2", cubeModel, "grid_cell", {1,3,1});
-    scene.addModel("cube_3", cubeModel, "grid_cell", {1,4,1});
-    scene.addModel("cube_4", cubeModel, "grid_cell", {1,5,1});
+    Mesh cubeMesh0 = GenMeshCube(1.0f, 1.0f, 1.0f);
+    Mesh cubeMesh1 = GenMeshCube(1.0f, 2.0f, 1.0f);
+    Mesh cubeMesh2 = GenMeshCube(1.0f, 3.0f, 1.0f);
+    Mesh cubeMesh3 = GenMeshCube(1.0f, 4.0f, 1.0f);
+    Mesh cubeMesh4 = GenMeshCube(1.0f, 5.0f, 1.0f);
+
+    Model cubeModel0 = LoadModelFromMesh(cubeMesh0);
+    Model cubeModel1 = LoadModelFromMesh(cubeMesh1);
+    Model cubeModel2 = LoadModelFromMesh(cubeMesh2);
+    Model cubeModel3 = LoadModelFromMesh(cubeMesh3);
+    Model cubeModel4 = LoadModelFromMesh(cubeMesh4);
+
+    cubeModel0.transform = MatrixTranslate(0.0f, 0.5f, 0.0f);
+    cubeModel1.transform = MatrixTranslate(0.0f, 1.0f, 0.0f);
+    cubeModel2.transform = MatrixTranslate(0.0f, 1.5f, 0.0f);
+    cubeModel3.transform = MatrixTranslate(0.0f, 2.0f, 0.0f);
+    cubeModel4.transform = MatrixTranslate(0.0f, 2.5f, 0.0f);
+
+    cubeModel0.materials[0].shader = scene.getShader("grid_cell");
+    cubeModel1.materials[0].shader = scene.getShader("grid_cell");
+    cubeModel2.materials[0].shader = scene.getShader("grid_cell");
+    cubeModel3.materials[0].shader = scene.getShader("grid_cell");
+    cubeModel4.materials[0].shader = scene.getShader("grid_cell");
+
+    scene.addModel("cube_0", cubeModel0);
+    scene.addModel("cube_1", cubeModel1);
+    scene.addModel("cube_2", cubeModel2);
+    scene.addModel("cube_3", cubeModel3);
+    scene.addModel("cube_4", cubeModel4);
 }
 
 void View2048::update(float dt) {
@@ -72,8 +97,8 @@ void View2048::updateBoard() {
 
             for (auto& move : lastMoves) {
                 if (move.fromX == i && move.fromY == j) {
-                    Vector3 srcPosition = { move.fromX * 2.2f, .75f, move.fromY * 2.2f };
-                    Vector3 dstPosition = { move.toX * 2.2f, .75f, move.toY * 2.2f };
+                    Vector3 srcPosition = { move.fromX * 2.2f, 0.0f, move.fromY * 2.2f };
+                    Vector3 dstPosition = { move.toX * 2.2f, 0.0f, move.toY * 2.2f };
                     animationTargets.push_back(object.sceneObject);
                     animationStartPositions.push_back(srcPosition);
                     animationTargetPositions.push_back(dstPosition);
@@ -124,7 +149,7 @@ View2048_Object View2048::placeObject(int level, int row, int col) {
     }
 
     SceneObject& sceneObject = scene.getObject(sceneObjectIndex);
-    sceneObject.position = {row * 2.2f, .75f, col * 2.2f};
+    sceneObject.position = {row * 2.2f, 0.0f, col * 2.2f};
     sceneObject.isActive = true;
     
     object.sceneObject = sceneObjectIndex;

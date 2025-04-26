@@ -19,11 +19,11 @@ public:
 
     int createObject(string modelId);
     int createObject(string modelId, Vector3 position);
-    void addModel(string id, Model model, string shaderId);
-    void addModel(string id, Model model, string shaderId, Vector3 scale);
+    void addModel(string id, Model model);
     void addShader(string id, const string& vsPath, const string& fsPath);
 
     SceneObject& getObject(int index);
+    const Shader& getShader(string id);
     const vector<Shader>& getShaders() const;
     const vector<SceneObject>& getObjects() const;
 

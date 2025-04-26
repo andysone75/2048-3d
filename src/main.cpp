@@ -63,9 +63,9 @@ int main() {
     while (!WindowShouldClose()) {
         float cameraDirection = 0;
 
-        if (IsKeyDown(KEY_A))
+        if (IsKeyDown(KEY_D))
             cameraDirection = -1;
-        else if (IsKeyDown(KEY_D))
+        else if (IsKeyDown(KEY_A))
             cameraDirection = 1;
 
         float dt = GetFrameTime();
