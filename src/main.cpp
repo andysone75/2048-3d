@@ -13,7 +13,7 @@
 #include "Scene.h"
 
 struct ShaderData {
-    int lightPosLocation;
+    int lightDirLocation;
     int viewPosLocation;
 };
 
@@ -32,15 +32,18 @@ int main() {
     float cameraRadius = 10;
     float cameraHeight = 8;
     float cameraSpeed = 160;
-    Vector3 cameraOffset = {4, 0, 4};
+    Vector3 cameraOffset = {1.6, 0, 1.6};
 
     Camera3D camera = { 0 };
     camera.target = cameraOffset;
     camera.up = { 0, 1, 0 };
-    camera.fovy = 20;
+    camera.fovy = 11;
     camera.projection = CAMERA_ORTHOGRAPHIC;
 
-    Vector3 lightPos = { 2, 4, 2 };
+    Vector3 lightDir = { -0.32f, -0.77f, 0.56 };
+    float lightAngle = 0.0f;
+
+    Color bgColor = { 70, 129, 221 };
 
     Game2048 game(5);
     std::array<std::array<int, 4>, 4> start = {{
@@ -92,22 +95,27 @@ int main() {
 
         view.update(dt);
 
+        if (IsKeyDown(KEY_W))
+            lightAngle += 30 * dt;
+        else if (IsKeyDown(KEY_S))
+            lightAngle -= 30 * dt;
+
         for (const Shader& shader : scene.getShaders()) {
             if (shaderLocations.find(&shader) == shaderLocations.end()) {
                 ShaderData shaderData;
-                shaderData.lightPosLocation = GetShaderLocation(shader, "lightPos");
+                shaderData.lightDirLocation = GetShaderLocation(shader, "lightDir");
                 shaderData.viewPosLocation = GetShaderLocation(shader, "viewPos");
                 shaderLocations[&shader] = shaderData;
             }
         }
 
         for (const Shader& shader : scene.getShaders()) {
-            SetShaderValue(shader, shaderLocations[&shader].lightPosLocation, &lightPos, SHADER_UNIFORM_VEC3);
+            SetShaderValue(shader, shaderLocations[&shader].lightDirLocation, &lightDir, SHADER_UNIFORM_VEC3);
             SetShaderValue(shader, shaderLocations[&shader].viewPosLocation, &camPos, SHADER_UNIFORM_VEC3);
         }
 
         BeginDrawing();
-        ClearBackground(GRAY);
+        ClearBackground(bgColor);
 
         BeginMode3D(camera);
         for (const auto& obj : scene.getObjects()) {
@@ -116,18 +124,11 @@ int main() {
         }
         EndMode3D();
 
-        int hiddenCount = 0;
-        for (const auto& obj : scene.getObjects())
-            if (!obj.isActive)
-                hiddenCount++;
-
-
         float logShift = 30;
         DrawText("Build: 2", 10, 10, 20, WHITE);
         DrawText(("FPS: " + std::to_string(int(1 / dt))).c_str(), 10, 10 + 1 * logShift, 20, WHITE);
-        DrawText(("Angle: " + std::to_string(int(cameraAngle))).c_str(), 10, 10 + 2 * logShift, 20, WHITE);
+        DrawText(("Camera Angle: " + std::to_string(int(cameraAngle))).c_str(), 10, 10 + 2 * logShift, 20, WHITE);
         DrawText(("Objects: " + std::to_string(scene.getObjects().size())).c_str(), 10, 10 + 3 * logShift, 20, WHITE);
-        DrawText(("Hidden: " + std::to_string(hiddenCount)).c_str(), 10, 10 + 4 * logShift, 20, WHITE);
         EndDrawing();
     }
 

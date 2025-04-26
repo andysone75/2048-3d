@@ -4,35 +4,39 @@
 
 using namespace std;
 
-const string GRID_ID = "grid_cell";
+const string GRID_CELL = "grid_cell";
 
 void Scene::initialize() {
-    addShader(GRID_ID, "shaders/lighting.vs", "shaders/lighting.fs");
+    addShader("white", "shaders/lit-vert.glsl", "shaders/lit-frag.glsl");
+    Shader shader = getShader("white");
+    int colorLoc = GetShaderLocation(shader, "objectColor");
+    Vector3 col = { 1.0, 1.0, 1.0 };
+    SetShaderValue(shader, colorLoc, &col, SHADER_UNIFORM_VEC3);
 
-    Mesh cubeMesh = GenMeshCube(2.0f, 0.5f, 2.0f);
+    Mesh cubeMesh = GenMeshCube(1.0f, 0.3f, 1.0f);
     Model cubeModel = LoadModelFromMesh(cubeMesh);
-    cubeModel.materials[0].shader = getShader(GRID_ID);
+    cubeModel.materials[0].shader = getShader("white");
 
-    addModel(GRID_ID, cubeModel);
+    addModel(GRID_CELL, cubeModel);
 
-    float shift = 2.2f;
+    float shift = 1.05f;
 
-    createObject(GRID_ID, {0 * shift, -0.25f, 0 * shift});
-    createObject(GRID_ID, {1 * shift, -0.25f, 0 * shift});
-    createObject(GRID_ID, {2 * shift, -0.25f, 0 * shift});
-    createObject(GRID_ID, {3 * shift, -0.25f, 0 * shift});
-    createObject(GRID_ID, {0 * shift, -0.25f, 1 * shift});
-    createObject(GRID_ID, {1 * shift, -0.25f, 1 * shift});
-    createObject(GRID_ID, {2 * shift, -0.25f, 1 * shift});
-    createObject(GRID_ID, {3 * shift, -0.25f, 1 * shift});
-    createObject(GRID_ID, {0 * shift, -0.25f, 2 * shift});
-    createObject(GRID_ID, {1 * shift, -0.25f, 2 * shift});
-    createObject(GRID_ID, {2 * shift, -0.25f, 2 * shift});
-    createObject(GRID_ID, {3 * shift, -0.25f, 2 * shift});
-    createObject(GRID_ID, {0 * shift, -0.25f, 3 * shift});
-    createObject(GRID_ID, {1 * shift, -0.25f, 3 * shift});
-    createObject(GRID_ID, {2 * shift, -0.25f, 3 * shift});
-    createObject(GRID_ID, {3 * shift, -0.25f, 3 * shift});
+    createObject(GRID_CELL, {0 * shift, -0.25f, 0 * shift});
+    createObject(GRID_CELL, {1 * shift, -0.25f, 0 * shift});
+    createObject(GRID_CELL, {2 * shift, -0.25f, 0 * shift});
+    createObject(GRID_CELL, {3 * shift, -0.25f, 0 * shift});
+    createObject(GRID_CELL, {0 * shift, -0.25f, 1 * shift});
+    createObject(GRID_CELL, {1 * shift, -0.25f, 1 * shift});
+    createObject(GRID_CELL, {2 * shift, -0.25f, 1 * shift});
+    createObject(GRID_CELL, {3 * shift, -0.25f, 1 * shift});
+    createObject(GRID_CELL, {0 * shift, -0.25f, 2 * shift});
+    createObject(GRID_CELL, {1 * shift, -0.25f, 2 * shift});
+    createObject(GRID_CELL, {2 * shift, -0.25f, 2 * shift});
+    createObject(GRID_CELL, {3 * shift, -0.25f, 2 * shift});
+    createObject(GRID_CELL, {0 * shift, -0.25f, 3 * shift});
+    createObject(GRID_CELL, {1 * shift, -0.25f, 3 * shift});
+    createObject(GRID_CELL, {2 * shift, -0.25f, 3 * shift});
+    createObject(GRID_CELL, {3 * shift, -0.25f, 3 * shift});
 }
 
 void Scene::unload() {

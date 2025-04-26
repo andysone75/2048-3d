@@ -9,11 +9,11 @@ View2048::View2048(const Game2048& game, Scene& scene)
 #include <iostream>
 
 void View2048::initialize() {
-    Mesh cubeMesh0 = GenMeshCube(1.0f, 1.0f, 1.0f);
-    Mesh cubeMesh1 = GenMeshCube(1.0f, 2.0f, 1.0f);
-    Mesh cubeMesh2 = GenMeshCube(1.0f, 3.0f, 1.0f);
-    Mesh cubeMesh3 = GenMeshCube(1.0f, 4.0f, 1.0f);
-    Mesh cubeMesh4 = GenMeshCube(1.0f, 5.0f, 1.0f);
+    Mesh cubeMesh0 = GenMeshCube(0.7f, 0.7f, 0.7f);
+    Mesh cubeMesh1 = GenMeshCube(0.7f, 0.7f * 2, 0.7f);
+    Mesh cubeMesh2 = GenMeshCube(0.7f, 0.7f * 3, 0.7f);
+    Mesh cubeMesh3 = GenMeshCube(0.7f, 0.7f * 4, 0.7f);
+    Mesh cubeMesh4 = GenMeshCube(0.7f, 0.7f * 5, 0.7f);
 
     Model cubeModel0 = LoadModelFromMesh(cubeMesh0);
     Model cubeModel1 = LoadModelFromMesh(cubeMesh1);
@@ -21,17 +21,49 @@ void View2048::initialize() {
     Model cubeModel3 = LoadModelFromMesh(cubeMesh3);
     Model cubeModel4 = LoadModelFromMesh(cubeMesh4);
 
-    cubeModel0.transform = MatrixTranslate(0.0f, 0.5f, 0.0f);
-    cubeModel1.transform = MatrixTranslate(0.0f, 1.0f, 0.0f);
-    cubeModel2.transform = MatrixTranslate(0.0f, 1.5f, 0.0f);
-    cubeModel3.transform = MatrixTranslate(0.0f, 2.0f, 0.0f);
-    cubeModel4.transform = MatrixTranslate(0.0f, 2.5f, 0.0f);
+    Vector3 blue = { 0.509804f, 0.8509804f, 0.9176471f };
+    Vector3 green = { 0.0f, 1.0f, 0.3960784f };
+    Vector3 purple = { 0.8117647f, 0.4078431f, 1.0f };
+    Vector3 red = { 1.0f, 0.2392157f, 0.2392157f };
+    Vector3 yellow = { 1.0f, 0.8862745f, 0.3372549f };
 
-    cubeModel0.materials[0].shader = scene.getShader("grid_cell");
-    cubeModel1.materials[0].shader = scene.getShader("grid_cell");
-    cubeModel2.materials[0].shader = scene.getShader("grid_cell");
-    cubeModel3.materials[0].shader = scene.getShader("grid_cell");
-    cubeModel4.materials[0].shader = scene.getShader("grid_cell");
+    scene.addShader("blue", "shaders/lit-vert.glsl", "shaders/lit-frag.glsl");
+    scene.addShader("green", "shaders/lit-vert.glsl", "shaders/lit-frag.glsl");
+    scene.addShader("purple", "shaders/lit-vert.glsl", "shaders/lit-frag.glsl");
+    scene.addShader("red", "shaders/lit-vert.glsl", "shaders/lit-frag.glsl");
+    scene.addShader("yellow", "shaders/lit-vert.glsl", "shaders/lit-frag.glsl");
+
+    Shader shader = scene.getShader("blue");
+    int colLoc = GetShaderLocation(shader, "objectColor");
+    SetShaderValue(shader, colLoc, &blue, SHADER_UNIFORM_VEC3);
+
+    shader = scene.getShader("green");
+    colLoc = GetShaderLocation(shader, "objectColor");
+    SetShaderValue(shader, colLoc, &green, SHADER_UNIFORM_VEC3);
+
+    shader = scene.getShader("purple");
+    colLoc = GetShaderLocation(shader, "objectColor");
+    SetShaderValue(shader, colLoc, &purple, SHADER_UNIFORM_VEC3);
+
+    shader = scene.getShader("red");
+    colLoc = GetShaderLocation(shader, "objectColor");
+    SetShaderValue(shader, colLoc, &red, SHADER_UNIFORM_VEC3);
+
+    shader = scene.getShader("yellow");
+    colLoc = GetShaderLocation(shader, "objectColor");
+    SetShaderValue(shader, colLoc, &yellow, SHADER_UNIFORM_VEC3);
+
+    cubeModel0.transform = MatrixTranslate(0.0f, 0.7f * 1 / 2, 0.0f);
+    cubeModel1.transform = MatrixTranslate(0.0f, 0.7f * 2 / 2, 0.0f);
+    cubeModel2.transform = MatrixTranslate(0.0f, 0.7f * 3 / 2, 0.0f);
+    cubeModel3.transform = MatrixTranslate(0.0f, 0.7f * 4 / 2, 0.0f);
+    cubeModel4.transform = MatrixTranslate(0.0f, 0.7f * 5 / 2, 0.0f);
+
+    cubeModel0.materials[0].shader = scene.getShader("blue");
+    cubeModel1.materials[0].shader = scene.getShader("green");
+    cubeModel2.materials[0].shader = scene.getShader("purple");
+    cubeModel3.materials[0].shader = scene.getShader("red");
+    cubeModel4.materials[0].shader = scene.getShader("yellow");
 
     scene.addModel("cube_0", cubeModel0);
     scene.addModel("cube_1", cubeModel1);
@@ -97,8 +129,8 @@ void View2048::updateBoard() {
 
             for (auto& move : lastMoves) {
                 if (move.fromX == i && move.fromY == j) {
-                    Vector3 srcPosition = { move.fromX * 2.2f, 0.0f, move.fromY * 2.2f };
-                    Vector3 dstPosition = { move.toX * 2.2f, 0.0f, move.toY * 2.2f };
+                    Vector3 srcPosition = { move.fromX * 1.05f, 0.0f, move.fromY * 1.05f };
+                    Vector3 dstPosition = { move.toX * 1.05f, 0.0f, move.toY * 1.05f };
                     animationTargets.push_back(object.sceneObject);
                     animationStartPositions.push_back(srcPosition);
                     animationTargetPositions.push_back(dstPosition);
@@ -149,7 +181,7 @@ View2048_Object View2048::placeObject(int level, int row, int col) {
     }
 
     SceneObject& sceneObject = scene.getObject(sceneObjectIndex);
-    sceneObject.position = {row * 2.2f, 0.0f, col * 2.2f};
+    sceneObject.position = {row * 1.05f, 0.0f, col * 1.05f};
     sceneObject.isActive = true;
     
     object.sceneObject = sceneObjectIndex;

@@ -1,6 +1,7 @@
 /out
 /release
 /CMakeSettings.json
+/build
 .vs
 release.zip
 yandex-server.bat
