@@ -28,7 +28,7 @@ int main() {
     emscripten_get_canvas_element_size("#canvas", &canvasW, &canvasH);
 #endif
     InitWindow(canvasW, canvasH, "Hello, raylib!");
-    SetTargetFPS(60);
+    SetTargetFPS(100);
 
     float cameraAngle = 25;
     float cameraRadius = 10;
@@ -62,20 +62,20 @@ int main() {
     Scene scene(resources);
     scene.initialize();
 
-    View2048 view(resources, game, scene);
+    View2048 view(game, scene);
     view.updateBoardFast();
 
     std::unordered_map<const Shader*, ShaderData> shaderLocations;
     
     while (!WindowShouldClose()) {
-        float cameraDirection = 0;
+        float dt = GetFrameTime();
 
+        float cameraDirection = 0;
         if (IsKeyDown(KEY_D))
             cameraDirection = -1;
         else if (IsKeyDown(KEY_A))
             cameraDirection = 1;
 
-        float dt = GetFrameTime();
         cameraAngle += cameraDirection * cameraSpeed * dt;
         camera.position = cameraOffset + getCameraPos(cameraAngle, cameraRadius, cameraHeight);
         Vector3 camPos = camera.position;
@@ -104,7 +104,7 @@ int main() {
         else if (IsKeyDown(KEY_S))
             lightAngle -= 30 * dt;
 
-        for (const Shader& shader : resources.getShaders()) {
+        for (const Shader& shader : resources.getLitShaders()) {
             if (shaderLocations.find(&shader) == shaderLocations.end()) {
                 ShaderData shaderData;
                 shaderData.lightDirLocation = GetShaderLocation(shader, "lightDir");
@@ -120,17 +120,24 @@ int main() {
         ClearBackground(bgColor);
 
         BeginMode3D(camera);
-        for (const auto& obj : scene.getObjects()) {
+
+        for (const int& objIndex : scene.getOpaqueObjects()) {
+            const SceneObject& obj = scene.getObject(objIndex);
             if (obj.isActive)
                 DrawModel(obj.model, obj.position, 1.0f, WHITE);
         }
+
+        for (const int& objIndex : scene.getTransparentObjects()) {
+            const SceneObject& obj = scene.getObject(objIndex);
+            if (obj.isActive)
+                DrawModel(obj.model, obj.position, 1.0f, WHITE);
+        }
+
         EndMode3D();
 
         float logShift = 30;
-        DrawText("Build: 2", 10, 10, 20, WHITE);
-        DrawText(("FPS: " + std::to_string(int(1 / dt))).c_str(), 10, 10 + 1 * logShift, 20, WHITE);
-        DrawText(("Camera Angle: " + std::to_string(int(cameraAngle))).c_str(), 10, 10 + 2 * logShift, 20, WHITE);
-        DrawText(("Objects: " + std::to_string(scene.getObjects().size())).c_str(), 10, 10 + 3 * logShift, 20, WHITE);
+        DrawText("Build: 5", 10, 10, 20, WHITE);
+        DrawFPS(10, 10 + 1 * logShift);
         EndDrawing();
     }
 

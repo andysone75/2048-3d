@@ -8,9 +8,12 @@
 using namespace std;
 
 struct SceneObject {
-    Model model;
+    const Model& model;
     Vector3 position;
     bool isActive = true;
+
+    SceneObject(const Model& _model, Vector3 _position)
+        : model(_model), position(_position) {};
 };
 
 class Scene {
@@ -18,13 +21,16 @@ public:
     Scene(const Resources& resources);
     void initialize();
 
-    int createObject(Model model);
-    int createObject(Model model, Vector3 position);
+    int createObjectOpaque(ModelType model, Vector3 position = {});
+    int createObjectTransparent(ModelType model, Vector3 position = {});
 
-    SceneObject& getObject(int index);
-    const vector<SceneObject>& getObjects() const;
+    SceneObject& getObject(int index) { return objects[index]; }
+    const vector<int>& getOpaqueObjects() const { return opaqueObjects; }
+    const vector<int>& getTransparentObjects() const { return transparentObjects; }
 
 private:
     const Resources& resources;
+    vector<int> opaqueObjects;
+    vector<int> transparentObjects;
     vector<SceneObject> objects;
 };

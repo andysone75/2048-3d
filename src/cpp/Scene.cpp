@@ -10,44 +10,36 @@ Scene::Scene(const Resources& resources)
 void Scene::initialize() {
     float shift = 1.05f;
 
-    Model gridCell = resources.getModel(ModelType::GridCell);
-
-    createObject(gridCell, {0 * shift, -0.25f, 0 * shift});
-    createObject(gridCell, {1 * shift, -0.25f, 0 * shift});
-    createObject(gridCell, {2 * shift, -0.25f, 0 * shift});
-    createObject(gridCell, {3 * shift, -0.25f, 0 * shift});
-    createObject(gridCell, {0 * shift, -0.25f, 1 * shift});
-    createObject(gridCell, {1 * shift, -0.25f, 1 * shift});
-    createObject(gridCell, {2 * shift, -0.25f, 1 * shift});
-    createObject(gridCell, {3 * shift, -0.25f, 1 * shift});
-    createObject(gridCell, {0 * shift, -0.25f, 2 * shift});
-    createObject(gridCell, {1 * shift, -0.25f, 2 * shift});
-    createObject(gridCell, {2 * shift, -0.25f, 2 * shift});
-    createObject(gridCell, {3 * shift, -0.25f, 2 * shift});
-    createObject(gridCell, {0 * shift, -0.25f, 3 * shift});
-    createObject(gridCell, {1 * shift, -0.25f, 3 * shift});
-    createObject(gridCell, {2 * shift, -0.25f, 3 * shift});
-    createObject(gridCell, {3 * shift, -0.25f, 3 * shift});
+    createObjectOpaque(ModelType::GridCell, {0 * shift, -0.25f, 0 * shift});
+    createObjectOpaque(ModelType::GridCell, {1 * shift, -0.25f, 0 * shift});
+    createObjectOpaque(ModelType::GridCell, {2 * shift, -0.25f, 0 * shift});
+    createObjectOpaque(ModelType::GridCell, {3 * shift, -0.25f, 0 * shift});
+    createObjectOpaque(ModelType::GridCell, {0 * shift, -0.25f, 1 * shift});
+    createObjectOpaque(ModelType::GridCell, {1 * shift, -0.25f, 1 * shift});
+    createObjectOpaque(ModelType::GridCell, {2 * shift, -0.25f, 1 * shift});
+    createObjectOpaque(ModelType::GridCell, {3 * shift, -0.25f, 1 * shift});
+    createObjectOpaque(ModelType::GridCell, {0 * shift, -0.25f, 2 * shift});
+    createObjectOpaque(ModelType::GridCell, {1 * shift, -0.25f, 2 * shift});
+    createObjectOpaque(ModelType::GridCell, {2 * shift, -0.25f, 2 * shift});
+    createObjectOpaque(ModelType::GridCell, {3 * shift, -0.25f, 2 * shift});
+    createObjectOpaque(ModelType::GridCell, {0 * shift, -0.25f, 3 * shift});
+    createObjectOpaque(ModelType::GridCell, {1 * shift, -0.25f, 3 * shift});
+    createObjectOpaque(ModelType::GridCell, {2 * shift, -0.25f, 3 * shift});
+    createObjectOpaque(ModelType::GridCell, {3 * shift, -0.25f, 3 * shift});
 }
 
-int Scene::createObject(Model model) {
-    SceneObject object;
-    object.model = model;
+int Scene::createObjectOpaque(ModelType model, Vector3 position) {
+    SceneObject object = SceneObject(resources.getModel(model), position);
     objects.push_back(object);
-    return objects.size() - 1;
-}
-
-int Scene::createObject(Model model, Vector3 position) {
-    int index = createObject(model);
-    SceneObject& object = getObject(index);
-    object.position = position;
+    int index = objects.size() - 1;
+    opaqueObjects.push_back(index);
     return index;
 }
 
-SceneObject& Scene::getObject(int index) {
-    return objects[index];
-}
-
-const vector<SceneObject>& Scene::getObjects() const {
-    return objects;
+int Scene::createObjectTransparent(ModelType model, Vector3 position) {
+    SceneObject object = SceneObject(resources.getModel(model), position);
+    objects.push_back(object);
+    int index = objects.size() - 1;
+    transparentObjects.push_back(index);
+    return index;
 }
