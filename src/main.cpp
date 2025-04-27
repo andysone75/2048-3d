@@ -11,6 +11,7 @@
 #include "Game2048.h"
 #include "View2048.h"
 #include "Scene.h"
+#include "Resources.h"
 
 struct ShaderData {
     int lightDirLocation;
@@ -27,6 +28,7 @@ int main() {
     emscripten_get_canvas_element_size("#canvas", &canvasW, &canvasH);
 #endif
     InitWindow(canvasW, canvasH, "Hello, raylib!");
+    SetTargetFPS(60);
 
     float cameraAngle = 25;
     float cameraRadius = 10;
@@ -54,11 +56,13 @@ int main() {
     }};
     game.setBoard(start);
 
-    Scene scene;
+    Resources resources;
+    resources.initialize();
+
+    Scene scene(resources);
     scene.initialize();
 
-    View2048 view(game, scene);
-    view.initialize();
+    View2048 view(resources, game, scene);
     view.updateBoardFast();
 
     std::unordered_map<const Shader*, ShaderData> shaderLocations;
@@ -100,16 +104,14 @@ int main() {
         else if (IsKeyDown(KEY_S))
             lightAngle -= 30 * dt;
 
-        for (const Shader& shader : scene.getShaders()) {
+        for (const Shader& shader : resources.getShaders()) {
             if (shaderLocations.find(&shader) == shaderLocations.end()) {
                 ShaderData shaderData;
                 shaderData.lightDirLocation = GetShaderLocation(shader, "lightDir");
                 shaderData.viewPosLocation = GetShaderLocation(shader, "viewPos");
                 shaderLocations[&shader] = shaderData;
             }
-        }
 
-        for (const Shader& shader : scene.getShaders()) {
             SetShaderValue(shader, shaderLocations[&shader].lightDirLocation, &lightDir, SHADER_UNIFORM_VEC3);
             SetShaderValue(shader, shaderLocations[&shader].viewPosLocation, &camPos, SHADER_UNIFORM_VEC3);
         }
@@ -132,7 +134,7 @@ int main() {
         EndDrawing();
     }
 
-    scene.unload();
+    resources.unload();
     CloseWindow();
     return 0;
 }

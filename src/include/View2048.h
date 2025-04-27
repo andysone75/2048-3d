@@ -14,15 +14,16 @@ struct View2048_Object {
 
 class View2048 {
 public:
-    View2048(const Game2048& game, Scene& scene);
-    void initialize();
+    View2048(const Resources& resources, const Game2048& game, Scene& scene);
     void update(float dt);
     void updateBoardFast();
     void updateBoard();
 
 private:
     const Game2048& game;
+    const Resources& resources;
     Scene& scene;
+
     float animationTimer;
     std::vector<std::stack<int>> objectsPools;
     std::vector<View2048_Object> placedObjects;

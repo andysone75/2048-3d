@@ -2,75 +2,10 @@
 #include "Utils.h"
 #include <cmath>
 #include "raymath.h"
+#include <stdexcept>
 
-View2048::View2048(const Game2048& game, Scene& scene)
-    : game(game), scene(scene) {}
-
-#include <iostream>
-
-void View2048::initialize() {
-    Mesh cubeMesh0 = GenMeshCube(0.7f, 0.7f, 0.7f);
-    Mesh cubeMesh1 = GenMeshCube(0.7f, 0.7f * 2, 0.7f);
-    Mesh cubeMesh2 = GenMeshCube(0.7f, 0.7f * 3, 0.7f);
-    Mesh cubeMesh3 = GenMeshCube(0.7f, 0.7f * 4, 0.7f);
-    Mesh cubeMesh4 = GenMeshCube(0.7f, 0.7f * 5, 0.7f);
-
-    Model cubeModel0 = LoadModelFromMesh(cubeMesh0);
-    Model cubeModel1 = LoadModelFromMesh(cubeMesh1);
-    Model cubeModel2 = LoadModelFromMesh(cubeMesh2);
-    Model cubeModel3 = LoadModelFromMesh(cubeMesh3);
-    Model cubeModel4 = LoadModelFromMesh(cubeMesh4);
-
-    Vector3 blue = { 0.509804f, 0.8509804f, 0.9176471f };
-    Vector3 green = { 0.0f, 1.0f, 0.3960784f };
-    Vector3 purple = { 0.8117647f, 0.4078431f, 1.0f };
-    Vector3 red = { 1.0f, 0.2392157f, 0.2392157f };
-    Vector3 yellow = { 1.0f, 0.8862745f, 0.3372549f };
-
-    scene.addShader("blue", "shaders/lit-vert.glsl", "shaders/lit-frag.glsl");
-    scene.addShader("green", "shaders/lit-vert.glsl", "shaders/lit-frag.glsl");
-    scene.addShader("purple", "shaders/lit-vert.glsl", "shaders/lit-frag.glsl");
-    scene.addShader("red", "shaders/lit-vert.glsl", "shaders/lit-frag.glsl");
-    scene.addShader("yellow", "shaders/lit-vert.glsl", "shaders/lit-frag.glsl");
-
-    Shader shader = scene.getShader("blue");
-    int colLoc = GetShaderLocation(shader, "objectColor");
-    SetShaderValue(shader, colLoc, &blue, SHADER_UNIFORM_VEC3);
-
-    shader = scene.getShader("green");
-    colLoc = GetShaderLocation(shader, "objectColor");
-    SetShaderValue(shader, colLoc, &green, SHADER_UNIFORM_VEC3);
-
-    shader = scene.getShader("purple");
-    colLoc = GetShaderLocation(shader, "objectColor");
-    SetShaderValue(shader, colLoc, &purple, SHADER_UNIFORM_VEC3);
-
-    shader = scene.getShader("red");
-    colLoc = GetShaderLocation(shader, "objectColor");
-    SetShaderValue(shader, colLoc, &red, SHADER_UNIFORM_VEC3);
-
-    shader = scene.getShader("yellow");
-    colLoc = GetShaderLocation(shader, "objectColor");
-    SetShaderValue(shader, colLoc, &yellow, SHADER_UNIFORM_VEC3);
-
-    cubeModel0.transform = MatrixTranslate(0.0f, 0.7f * 1 / 2, 0.0f);
-    cubeModel1.transform = MatrixTranslate(0.0f, 0.7f * 2 / 2, 0.0f);
-    cubeModel2.transform = MatrixTranslate(0.0f, 0.7f * 3 / 2, 0.0f);
-    cubeModel3.transform = MatrixTranslate(0.0f, 0.7f * 4 / 2, 0.0f);
-    cubeModel4.transform = MatrixTranslate(0.0f, 0.7f * 5 / 2, 0.0f);
-
-    cubeModel0.materials[0].shader = scene.getShader("blue");
-    cubeModel1.materials[0].shader = scene.getShader("green");
-    cubeModel2.materials[0].shader = scene.getShader("purple");
-    cubeModel3.materials[0].shader = scene.getShader("red");
-    cubeModel4.materials[0].shader = scene.getShader("yellow");
-
-    scene.addModel("cube_0", cubeModel0);
-    scene.addModel("cube_1", cubeModel1);
-    scene.addModel("cube_2", cubeModel2);
-    scene.addModel("cube_3", cubeModel3);
-    scene.addModel("cube_4", cubeModel4);
-}
+View2048::View2048(const Resources& resources, const Game2048& game, Scene& scene)
+    : resources(resources), game(game), scene(scene) {}
 
 void View2048::update(float dt) {
     if (animationTimer <= 0.0f) {
@@ -143,8 +78,6 @@ void View2048::updateBoard() {
     animationTimer = ANIMATION_TIME;
 }
 
-#include <iostream>
-
 void View2048::poolObjects() {
     for (auto& object : placedObjects)
     {
@@ -162,6 +95,23 @@ void View2048::poolObjects() {
     placedObjects.clear();
 }
 
+Model getModelByLevel(int level, const Resources& resources) {
+    switch (level) {
+    case 0:
+        return resources.getModel(ModelType::Level0);
+    case 1:
+        return resources.getModel(ModelType::Level1);
+    case 2:
+        return resources.getModel(ModelType::Level2);
+    case 3:
+        return resources.getModel(ModelType::Level3);
+    case 4:
+        return resources.getModel(ModelType::Level4);
+    }
+
+    throw std::runtime_error("Shader not found");
+}
+
 View2048_Object View2048::placeObject(int level, int row, int col) {
     View2048_Object object;
     int sceneObjectIndex = -1;
@@ -176,8 +126,7 @@ View2048_Object View2048::placeObject(int level, int row, int col) {
     }
 
     if (sceneObjectIndex == -1) {
-        string modelId = "cube_" + to_string(level);
-        sceneObjectIndex = scene.createObject(modelId);
+        sceneObjectIndex = scene.createObject(getModelByLevel(level, resources));
     }
 
     SceneObject& sceneObject = scene.getObject(sceneObjectIndex);

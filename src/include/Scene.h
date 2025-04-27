@@ -1,6 +1,7 @@
 #pragma once
 
 #include "raylib.h"
+#include "Resources.h"
 #include <vector>
 #include <string>
 
@@ -14,23 +15,16 @@ struct SceneObject {
 
 class Scene {
 public:
+    Scene(const Resources& resources);
     void initialize();
-    void unload();
 
-    int createObject(string modelId);
-    int createObject(string modelId, Vector3 position);
-    void addModel(string id, Model model);
-    void addShader(string id, const string& vsPath, const string& fsPath);
+    int createObject(Model model);
+    int createObject(Model model, Vector3 position);
 
     SceneObject& getObject(int index);
-    const Shader& getShader(string id);
-    const vector<Shader>& getShaders() const;
     const vector<SceneObject>& getObjects() const;
 
 private:
+    const Resources& resources;
     vector<SceneObject> objects;
-    vector<Model> models;
-    vector<Shader> shaders;
-    vector<string> modelIds;
-    vector<string> shaderIds;
 };
