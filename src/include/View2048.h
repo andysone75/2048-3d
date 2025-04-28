@@ -7,12 +7,12 @@
 const float ANIMATION_TIME = .25f;
 
 struct View2048_Cube {
-    int cubeId;
+    int* cubeIds;
     int labelId;
+    int level;
 };
 
 struct View2048_Object {
-    int level;
     int row, col;
     View2048_Cube cube;
 };
@@ -29,9 +29,9 @@ private:
     Scene& scene;
 
     float animationTimer;
-    std::vector<std::stack<View2048_Object>> objectsPools;
+    std::vector<std::stack<View2048_Cube>> objectsPools;
     std::vector<View2048_Object> placedObjects;
-    std::vector<View2048_Object> animationTargets;
+    std::vector<View2048_Cube> animationTargets;
     std::vector<Vector3> animationStartPositions;
     std::vector<Vector3> animationTargetPositions;
 

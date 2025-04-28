@@ -8,11 +8,17 @@ using namespace std;
 
 enum class LitShaderType {
     White,
+	Gray,
+	LightGreen,
+	DarkGreen,
 	Blue,
-	Green,
+	DarkBlue,
 	Purple,
+	Pink,
 	Red,
+	Orange,
 	Yellow,
+	Gradient,
 };
 
 enum class ModelType {
@@ -22,11 +28,23 @@ enum class ModelType {
 	Level2,
 	Level3,
 	Level4,
+	Level5,
+	Level6,
+	Level7,
+	Level8,
+	Level9,
+	Level10,
 	Text_2,
 	Text_4,
 	Text_8,
 	Text_16,
 	Text_32,
+	Text_64,
+	Text_128,
+	Text_256,
+	Text_512,
+	Text_1024,
+	Text_2048,
 };
 
 enum class TextureType {
@@ -35,6 +53,12 @@ enum class TextureType {
 	Text_8,
 	Text_16,
 	Text_32,
+	Text_64,
+	Text_128,
+	Text_256,
+	Text_512,
+	Text_1024,
+	Text_2048,
 };
 
 class Resources {
@@ -43,11 +67,11 @@ public:
 	void unload();
 
 	const Model& getModel(ModelType model) const { return models[static_cast<int>(model)]; }
-	const array<Shader, 6>& getLitShaders() const { return litShaders; }
+	const array<Shader, 12>& getLitShaders() const { return litShaders; }
 
 private:
-	array<Shader, 6> litShaders;
+	array<Shader, 12> litShaders;
 	array<Shader, 1> textShaders;
-	array<Model, 11> models;
-	array<RenderTexture, 5> renderTextures;
+	array<Model, 23> models;
+	array<RenderTexture, 11> renderTextures;
 };

@@ -17,6 +17,7 @@
 struct ShaderData {
     int lightDirLocation;
     int viewPosLocation;
+    int timeLocation;
 };
 
 Vector3 getCameraPos(float angle, float radius, float height) {
@@ -53,10 +54,11 @@ private:
     
     Vector3 lightDir = { -0.32f, -0.77f, 0.56 };
     Color bgColor = { 70, 129, 221 };
+    float time = 0;
 };
 
 int main() {
-    int canvasW = 800, canvasH = 600;
+    int canvasW = 720, canvasH = 1280;
 #ifdef __EMSCRIPTEN__
     emscripten_get_canvas_element_size("#canvas", &canvasW, &canvasH);
 #endif
@@ -65,14 +67,15 @@ int main() {
     Resources resources;
     resources.initialize();
 
-    Game2048 game(5);
+    Game2048 game(11);
     std::array<std::array<int, 4>, 4> start = { {
         {0, 0, 0, 0},
         {0, 0, 0, 0},
-        {0, 0, 1, 0},
+        {0, 0, 0, 0},
         {0, 0, 0, 0}
     } };
     game.setBoard(start);
+    game.addRandom();
 
     Scene scene = Scene(resources);
     scene.initialize();
@@ -154,11 +157,13 @@ void Application::update() {
             ShaderData shaderData;
             shaderData.lightDirLocation = GetShaderLocation(shader, "lightDir");
             shaderData.viewPosLocation = GetShaderLocation(shader, "viewPos");
+            shaderData.timeLocation = GetShaderLocation(shader, "time");
             shaderLocations[&shader] = shaderData;
         }
 
         SetShaderValue(shader, shaderLocations[&shader].lightDirLocation, &lightDir, SHADER_UNIFORM_VEC3);
         SetShaderValue(shader, shaderLocations[&shader].viewPosLocation, &camera.position, SHADER_UNIFORM_VEC3);
+        SetShaderValue(shader, shaderLocations[&shader].timeLocation, &time, SHADER_UNIFORM_FLOAT);
     }
 
     BeginDrawing();
@@ -184,6 +189,8 @@ void Application::update() {
     DrawText("Build: 8", 10, 10, 20, WHITE);
     DrawFPS(10, 10 + 1 * logShift);
     EndDrawing();
+
+    time += dt;
 }
 
 bool Application::isRunning() {

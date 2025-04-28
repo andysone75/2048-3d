@@ -4,6 +4,8 @@
 #include "raymath.h"
 #include <stdexcept>
 
+int getCubesCount(int level) { return level < 10 ? (level + 1) : 1; }
+
 View2048::View2048(const Game2048& game, Scene& scene)
     : game(game), scene(scene) {}
 
@@ -22,8 +24,7 @@ void View2048::update(float dt) {
     float t = 1.0f - animationTimer / ANIMATION_TIME;
     t = 1.0f - std::pow(1.0f - t, 3); // out cubic easing
 
-    for (size_t i = 0; i < animationTargets.size(); i++)
-    {
+    for (size_t i = 0; i < animationTargets.size(); i++) {
         Vector3 pos = utils::lerp(
             animationStartPositions[i],
             animationTargetPositions[i],
@@ -31,19 +32,21 @@ void View2048::update(float dt) {
         );
 
         const auto& target = animationTargets[i];
+        int cubesCount = getCubesCount(target.level);
 
-        scene.getObject(target.cube.cubeId).position = pos;
-        scene.getObject(target.cube.labelId).position = pos + Vector3{0, 0.6f * (target.level + 1) + .1f, 0};
+        for (int i = 0; i < cubesCount; i++) {
+            scene.getObject(target.cubeIds[i]).position = Vector3{pos.x, .2f * i, pos.z};
+        }
+        
+        scene.getObject(target.labelId).position = pos + Vector3{0, .2f * (target.level + 1), 0};
     }
 }
 
 void View2048::updateBoardFast() {
     const auto& board = game.getBoard();
     poolObjects();
-    for (int i = 0; i < 4; i++)
-    {
-        for (int j = 0; j < 4; j++)
-        {
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
             if (board[i][j] == 0) continue;
             placeObject(board[i][j] - 1, i, j);
         }
@@ -58,10 +61,8 @@ void View2048::updateBoard() {
     const auto& previousBoard = game.getPreviousBoard();
     const auto& lastMoves = game.getLastMoves();
     poolObjects();
-    for (int i = 0; i < 4; i++)
-    {
-        for (int j = 0; j < 4; j++)
-        {
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
             if (previousBoard[i][j] == 0) continue;
             View2048_Object object = placeObject(previousBoard[i][j] - 1, i, j);
 
@@ -69,7 +70,7 @@ void View2048::updateBoard() {
                 if (move.fromX == i && move.fromY == j) {
                     Vector3 srcPosition = { move.fromX * 1.05f, 0.0f, move.fromY * 1.05f };
                     Vector3 dstPosition = { move.toX * 1.05f, 0.0f, move.toY * 1.05f };
-                    animationTargets.push_back(object);
+                    animationTargets.push_back(object.cube);
                     animationStartPositions.push_back(srcPosition);
                     animationTargetPositions.push_back(dstPosition);
                     break;
@@ -82,17 +83,21 @@ void View2048::updateBoard() {
 }
 
 void View2048::poolObjects() {
-    for (auto& object : placedObjects)
-    {
-        while (object.level + 1 > objectsPools.size())
-        {
-            std::stack<View2048_Object> pool;
+    for (auto& object : placedObjects) {
+        while (object.cube.level + 1 > objectsPools.size()) {
+            std::stack<View2048_Cube> pool;
             objectsPools.push_back(pool);
         }
         
-        std::stack<View2048_Object>& pool = objectsPools[object.level];
-        pool.push(object);
-        scene.getObject(object.cube.cubeId).isActive = false;
+        std::stack<View2048_Cube>& pool = objectsPools[object.cube.level];
+        pool.push(object.cube);
+
+        int cubesCount = getCubesCount(object.cube.level);
+
+        for (int i = 0; i < cubesCount; i++) {
+            scene.getObject(object.cube.cubeIds[i]).isActive = false;
+        }
+
         scene.getObject(object.cube.labelId).isActive = false;
     }
 
@@ -111,6 +116,18 @@ ModelType getCubeModelByLevel(int level) {
         return ModelType::Level3;
     case 4:
         return ModelType::Level4;
+    case 5:
+        return ModelType::Level5;
+    case 6:
+        return ModelType::Level6;
+    case 7:
+        return ModelType::Level7;
+    case 8:
+        return ModelType::Level8;
+    case 9:
+        return ModelType::Level9;
+    case 10:
+        return ModelType::Level10;
     }
 
     throw std::runtime_error("Model not found");
@@ -128,6 +145,18 @@ ModelType getLabelModelByLevel(int level) {
         return ModelType::Text_16;
     case 4:
         return ModelType::Text_32;
+    case 5:
+        return ModelType::Text_64;
+    case 6:
+        return ModelType::Text_128;
+    case 7:
+        return ModelType::Text_256;
+    case 8:
+        return ModelType::Text_512;
+    case 9:
+        return ModelType::Text_1024;
+    case 10:
+        return ModelType::Text_2048;
     }
 
     throw std::runtime_error("Model not found");
@@ -138,31 +167,47 @@ View2048_Object View2048::placeObject(int level, int row, int col) {
     bool poolHit = false;
 
     if (level < objectsPools.size()) {
-        std::stack<View2048_Object>& pool = objectsPools[level];
+        std::stack<View2048_Cube>& pool = objectsPools[level];
 
         if (!pool.empty()) {
-            object = pool.top();
+            object.cube = pool.top();
             pool.pop();
             poolHit = true;
         }
     }
 
+
     if (!poolHit) {
-        object.cube.cubeId = scene.createObjectOpaque(getCubeModelByLevel(level));
+        if (level < 10) {
+            object.cube.cubeIds = new int[level + 1];
+
+            for (int i = 0; i < level + 1; i++) {
+                object.cube.cubeIds[i] = scene.createObjectOpaque(getCubeModelByLevel(i));
+            }
+        } else {
+            object.cube.cubeIds = new int[1];
+            object.cube.cubeIds[0] = scene.createObjectOpaque(getCubeModelByLevel(10));
+        }
+
         object.cube.labelId = scene.createObjectTransparent(getLabelModelByLevel(level));
+        object.cube.level = level;
     }
 
-    SceneObject& sceneObjectCube = scene.getObject(object.cube.cubeId);
-    sceneObjectCube.position = {row * 1.05f, 0.0f, col * 1.05f};
-    sceneObjectCube.isActive = true;
+    int cubesCount = getCubesCount(level);
+
+    for (int i = 0; i < cubesCount; i++) {
+        SceneObject& sceneObjectCube = scene.getObject(object.cube.cubeIds[i]);
+        sceneObjectCube.position = { row * 1.05f, .2f * i, col * 1.05f };
+        sceneObjectCube.isActive = true;
+    }
 
     SceneObject& sceneObjectLabel = scene.getObject(object.cube.labelId);
-    sceneObjectLabel.position = { row * 1.05f, 0.6f * (level + 1) + .1f, col * 1.05f };
+    sceneObjectLabel.position = { row * 1.05f, .2f * (level + 1), col * 1.05f};
     sceneObjectLabel.isActive = true;
+    //sceneObjectLabel.isActive = false; // Temporary disable labels
 
     object.row = row;
     object.col = col;
-    object.level = level;
     placedObjects.push_back(object);
     return object;
 }
