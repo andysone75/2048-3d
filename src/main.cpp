@@ -43,6 +43,7 @@ private:
     Game2048& game;
     View2048& view;
     Camera3D camera = {};
+    RenderTexture2D renderTarget;
 
     std::unordered_map<const Shader*, ShaderData> shaderLocations;
     
@@ -114,6 +115,9 @@ void Application::initialize() {
     camera.up = { 0, 1, 0 };
     camera.fovy = 11;
     camera.projection = CAMERA_ORTHOGRAPHIC;
+
+    renderTarget = LoadRenderTexture(GetScreenWidth() * 2.f, GetScreenHeight() * 2.f);
+    SetTextureFilter(renderTarget.texture, TEXTURE_FILTER_BILINEAR);
 }
 
 void Application::terminate() {
@@ -166,28 +170,36 @@ void Application::update() {
         SetShaderValue(shader, shaderLocations[&shader].timeLocation, &time, SHADER_UNIFORM_FLOAT);
     }
 
+    BeginTextureMode(renderTarget);
+        ClearBackground(bgColor);
+        BeginMode3D(camera);
+            for (const int& objIndex : scene.getOpaqueObjects()) {
+                const SceneObject& obj = scene.getObject(objIndex);
+                if (obj.isActive)
+                    DrawModel(obj.model, obj.position, 1.0f, WHITE);
+            }
+
+            for (const int& objIndex : scene.getTransparentObjects()) {
+                const SceneObject& obj = scene.getObject(objIndex);
+                if (obj.isActive)
+                    DrawModel(obj.model, obj.position, 1.0f, WHITE);
+            }
+        EndMode3D();
+    EndTextureMode();
+
     BeginDrawing();
-    ClearBackground(bgColor);
-
-    BeginMode3D(camera);
-
-    for (const int& objIndex : scene.getOpaqueObjects()) {
-        const SceneObject& obj = scene.getObject(objIndex);
-        if (obj.isActive)
-            DrawModel(obj.model, obj.position, 1.0f, WHITE);
-    }
-
-    for (const int& objIndex : scene.getTransparentObjects()) {
-        const SceneObject& obj = scene.getObject(objIndex);
-        if (obj.isActive)
-            DrawModel(obj.model, obj.position, 1.0f, WHITE);
-    }
-
-    EndMode3D();
-
-    float logShift = 30;
-    DrawText("Build: 8", 10, 10, 20, WHITE);
-    DrawFPS(10, 10 + 1 * logShift);
+        ClearBackground(bgColor);
+            DrawTexturePro(
+                renderTarget.texture,
+                Rectangle{ 0,0, (float)renderTarget.texture.width, -(float)renderTarget.texture.height },
+                Rectangle{0,0, (float)GetScreenWidth(), -(float)GetScreenHeight() },
+                Vector2{0,0},
+                0.f,
+                WHITE
+            );
+        float logShift = 30;
+        DrawText("Build: 8", 10, 10, 20, WHITE);
+        DrawFPS(10, 10 + 1 * logShift);
     EndDrawing();
 
     time += dt;
