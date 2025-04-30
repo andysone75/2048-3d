@@ -27,6 +27,7 @@ else()
     target_include_directories(index PRIVATE ${CMAKE_SOURCE_DIR}/raylib-win/include)
     target_link_directories(index PRIVATE ${CMAKE_SOURCE_DIR}/raylib-win/lib)
     target_link_libraries(index PRIVATE raylib)
+    # target_compile_definitions(index PRIVATE RLGL_SHOW_GL_DETAILS)
 endif()
 
 if(WIN32)
