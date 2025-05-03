@@ -4,38 +4,61 @@ project(city-2048)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+include(CheckIncludeFile)
+include(CheckLibraryExists)
+
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS src/cpp/*.cpp)
 add_executable(index src/main.cpp ${SRC_FILES})
-target_include_directories(index PRIVATE ${CMAKE_SOURCE_DIR}/src/include)
+target_include_directories(index PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/include
+    ${CMAKE_SOURCE_DIR}/glm)
 
 if (EMSCRIPTEN)
-    target_include_directories(index PRIVATE ${CMAKE_SOURCE_DIR}/raylib/include)
-    target_link_directories(index PRIVATE ${CMAKE_SOURCE_DIR}/raylib/lib)
-    target_link_libraries(index PRIVATE raylib)
-
     set_target_properties(index PROPERTIES SUFFIX ".html")
+    target_include_directories(index PRIVATE ${CMAKE_SOURCE_DIR}/freetype/include)
+
     set(EMSCRIPTEN_PRELOAD_DIR "${CMAKE_SOURCE_DIR}/shaders")
+    set(FONTS_DIR "${CMAKE_SOURCE_DIR}/fonts")
+
     target_link_options(index PRIVATE
         "-sUSE_GLFW=3"
+        "-sUSE_FREETYPE=1"
+        "-sFULL_ES3=1"
         "-sASYNCIFY"
         "-sALLOW_MEMORY_GROWTH=1"
         "--preload-file=${EMSCRIPTEN_PRELOAD_DIR}@/shaders"
+        "--preload-file=${FONTS_DIR}@/fonts"
         "--shell-file=${CMAKE_SOURCE_DIR}/index.html"
         # "-sUSE_WEBGL2=1"
     )
-else()
-    target_include_directories(index PRIVATE ${CMAKE_SOURCE_DIR}/raylib-win/include)
-    target_link_directories(index PRIVATE ${CMAKE_SOURCE_DIR}/raylib-win/lib)
-    target_link_libraries(index PRIVATE raylib)
-    # target_compile_definitions(index PRIVATE RLGL_SHOW_GL_DETAILS)
-endif()
 
-if(WIN32)
-    target_link_libraries(index PRIVATE opengl32 gdi32 winmm)
+    target_compile_options(index PRIVATE -Werror)
+else()
+
+    set(GLFW_ROOT ${CMAKE_SOURCE_DIR}/glfw)
+    set(GLEW_ROOT ${CMAKE_SOURCE_DIR}/glew)
+    set(FREETYPE_ROOT ${CMAKE_SOURCE_DIR}/freetype)
+
+    target_include_directories(index PRIVATE "${GLFW_ROOT}/include")
+    target_link_directories(index PRIVATE "${GLFW_ROOT}/lib")
+
+    target_include_directories(index PRIVATE "${GLEW_ROOT}/include")
+    target_link_directories(index PRIVATE "${GLEW_ROOT}/lib")
+
+    target_include_directories(index PRIVATE "${FREETYPE_ROOT}/include")
+    target_link_directories(index PRIVATE "${FREETYPE_ROOT}/lib")
+
+    target_compile_definitions(index PRIVATE GLEW_STATIC)
+    target_link_libraries(index PRIVATE freetype glfw3 glew32s opengl32 gdi32 winmm)
 
     add_custom_command(TARGET index POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_SOURCE_DIR}/shaders"
             "$<TARGET_FILE_DIR:index>/shaders"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/fonts"
+            "$<TARGET_FILE_DIR:index>/fonts"
     )
+
+    # target_compile_definitions(index PRIVATE RLGL_SHOW_GL_DETAILS)
 endif()

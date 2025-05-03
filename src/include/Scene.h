@@ -1,6 +1,5 @@
 #pragma once
 
-#include "raylib.h"
 #include "Resources.h"
 #include <vector>
 #include <string>
@@ -9,10 +8,10 @@ using namespace std;
 
 struct SceneObject {
     const Model& model;
-    Vector3 position;
+    glm::vec3 position;
     bool isActive = true;
 
-    SceneObject(const Model& _model, Vector3 _position)
+    SceneObject(const Model& _model, glm::vec3 _position)
         : model(_model), position(_position) {};
 };
 
@@ -21,10 +20,11 @@ public:
     Scene(const Resources& resources);
     void initialize();
 
-    int createObjectOpaque(ModelType model, Vector3 position = {});
-    int createObjectTransparent(ModelType model, Vector3 position = {});
+    int createObjectOpaque(ModelType model, glm::vec3 position = {});
+    int createObjectTransparent(ModelType model, glm::vec3 position = {});
 
     SceneObject& getObject(int index) { return objects[index]; }
+    const SceneObject& getObject(int index) const { return objects[index]; }
     const vector<int>& getOpaqueObjects() const { return opaqueObjects; }
     const vector<int>& getTransparentObjects() const { return transparentObjects; }
 

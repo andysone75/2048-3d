@@ -5,3 +5,7 @@
 .vs
 release.zip
 yandex-server.bat
+/glew
+/glfw
+/glm
+/freetype

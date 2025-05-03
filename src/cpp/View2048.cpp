@@ -1,8 +1,7 @@
 #include "View2048.h"
-#include "Utils.h"
 #include <cmath>
-#include "raymath.h"
 #include <stdexcept>
+#include <glm/glm.hpp>
 
 int getCubesCount(int level) { return level < 10 ? (level + 1) : 1; }
 
@@ -25,7 +24,7 @@ void View2048::update(float dt) {
     t = 1.0f - std::pow(1.0f - t, 3); // out cubic easing
 
     for (size_t i = 0; i < animationTargets.size(); i++) {
-        Vector3 pos = utils::lerp(
+        glm::vec3 pos = glm::mix(
             animationStartPositions[i],
             animationTargetPositions[i],
             t
@@ -35,10 +34,10 @@ void View2048::update(float dt) {
         int cubesCount = getCubesCount(target.level);
 
         for (int i = 0; i < cubesCount; i++) {
-            scene.getObject(target.cubeIds[i]).position = Vector3{pos.x, .2f * i, pos.z};
+            scene.getObject(target.cubeIds[i]).position = glm::vec3(pos.x, .2f * i, pos.z);
         }
         
-        scene.getObject(target.labelId).position = pos + Vector3{0, .2f * (target.level + 1), 0};
+        //scene.getObject(target.labelId).position = pos + glm::vec3(0, .2f * (target.level + 1), 0);
     }
 }
 
@@ -68,8 +67,8 @@ void View2048::updateBoard() {
 
             for (auto& move : lastMoves) {
                 if (move.fromX == i && move.fromY == j) {
-                    Vector3 srcPosition = { move.fromX * 1.05f, 0.0f, move.fromY * 1.05f };
-                    Vector3 dstPosition = { move.toX * 1.05f, 0.0f, move.toY * 1.05f };
+                    glm::vec3 srcPosition = { move.fromX * 1.05f, 0.0f, move.fromY * 1.05f };
+                    glm::vec3 dstPosition = { move.toX * 1.05f, 0.0f, move.toY * 1.05f };
                     animationTargets.push_back(object.cube);
                     animationStartPositions.push_back(srcPosition);
                     animationTargetPositions.push_back(dstPosition);
@@ -98,7 +97,7 @@ void View2048::poolObjects() {
             scene.getObject(object.cube.cubeIds[i]).isActive = false;
         }
 
-        scene.getObject(object.cube.labelId).isActive = false;
+        //scene.getObject(object.cube.labelId).isActive = false;
     }
 
     placedObjects.clear();
@@ -133,34 +132,34 @@ ModelType getCubeModelByLevel(int level) {
     throw std::runtime_error("Model not found");
 }
 
-ModelType getLabelModelByLevel(int level) {
-    switch (level) {
-    case 0:
-        return ModelType::Text_2;
-    case 1:
-        return ModelType::Text_4;
-    case 2:
-        return ModelType::Text_8;
-    case 3:
-        return ModelType::Text_16;
-    case 4:
-        return ModelType::Text_32;
-    case 5:
-        return ModelType::Text_64;
-    case 6:
-        return ModelType::Text_128;
-    case 7:
-        return ModelType::Text_256;
-    case 8:
-        return ModelType::Text_512;
-    case 9:
-        return ModelType::Text_1024;
-    case 10:
-        return ModelType::Text_2048;
-    }
-
-    throw std::runtime_error("Model not found");
-}
+//ModelType getLabelModelByLevel(int level) {
+//    switch (level) {
+//    case 0:
+//        return ModelType::Text_2;
+//    case 1:
+//        return ModelType::Text_4;
+//    case 2:
+//        return ModelType::Text_8;
+//    case 3:
+//        return ModelType::Text_16;
+//    case 4:
+//        return ModelType::Text_32;
+//    case 5:
+//        return ModelType::Text_64;
+//    case 6:
+//        return ModelType::Text_128;
+//    case 7:
+//        return ModelType::Text_256;
+//    case 8:
+//        return ModelType::Text_512;
+//    case 9:
+//        return ModelType::Text_1024;
+//    case 10:
+//        return ModelType::Text_2048;
+//    }
+//
+//    throw std::runtime_error("Model not found");
+//}
 
 View2048_Object View2048::placeObject(int level, int row, int col) {
     View2048_Object object;
@@ -176,7 +175,6 @@ View2048_Object View2048::placeObject(int level, int row, int col) {
         }
     }
 
-
     if (!poolHit) {
         if (level < 10) {
             object.cube.cubeIds = new int[level + 1];
@@ -189,7 +187,7 @@ View2048_Object View2048::placeObject(int level, int row, int col) {
             object.cube.cubeIds[0] = scene.createObjectOpaque(getCubeModelByLevel(10));
         }
 
-        object.cube.labelId = scene.createObjectTransparent(getLabelModelByLevel(level));
+        //object.cube.labelId = scene.createObjectTransparent(getLabelModelByLevel(level));
         object.cube.level = level;
     }
 
@@ -201,9 +199,9 @@ View2048_Object View2048::placeObject(int level, int row, int col) {
         sceneObjectCube.isActive = true;
     }
 
-    SceneObject& sceneObjectLabel = scene.getObject(object.cube.labelId);
-    sceneObjectLabel.position = { row * 1.05f, .2f * (level + 1), col * 1.05f};
-    sceneObjectLabel.isActive = true;
+    //SceneObject& sceneObjectLabel = scene.getObject(object.cube.labelId);
+    //sceneObjectLabel.position = { row * 1.05f, .2f * (level + 1), col * 1.05f};
+    //sceneObjectLabel.isActive = true;
     //sceneObjectLabel.isActive = false; // Temporary disable labels
 
     object.row = row;

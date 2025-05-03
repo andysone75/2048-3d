@@ -1,11 +1,10 @@
 #include "Scene.h"
-#include "raymath.h"
 #include <stdexcept>
+#include <glm/glm.hpp>
 
 using namespace std;
 
-Scene::Scene(const Resources& resources)
-    : resources(resources) {}
+Scene::Scene(const Resources& _resources) : resources(_resources) {}
 
 void Scene::initialize() {
     float shift = 1.05f;
@@ -28,7 +27,7 @@ void Scene::initialize() {
     createObjectOpaque(ModelType::GridCell, {3 * shift, -0.15f, 3 * shift});
 }
 
-int Scene::createObjectOpaque(ModelType model, Vector3 position) {
+int Scene::createObjectOpaque(ModelType model, glm::vec3 position) {
     SceneObject object = SceneObject(resources.getModel(model), position);
     objects.push_back(object);
     int index = objects.size() - 1;
@@ -36,7 +35,7 @@ int Scene::createObjectOpaque(ModelType model, Vector3 position) {
     return index;
 }
 
-int Scene::createObjectTransparent(ModelType model, Vector3 position) {
+int Scene::createObjectTransparent(ModelType model, glm::vec3 position) {
     SceneObject object = SceneObject(resources.getModel(model), position);
     objects.push_back(object);
     int index = objects.size() - 1;
