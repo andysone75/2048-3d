@@ -14,7 +14,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#define RES_LIGHTING  1024
 #define RES_SHADOWMAP 1024
 #define RES_SSAO      1024
 #define SCALE_RES(res, scale) static_cast<int>((float)res * scale);
@@ -87,9 +86,7 @@ Application::Application(
     view(_view),
     lightingPass(_scene, camera, light),
     shadowPass( _scene, light),
-    positionPass(_scene, camera),
-    normalPass(_scene, camera),
-    ssaoPass(camera)
+    positionPass(_scene, camera)
 {}
 
 bool Application::initialize() {
@@ -111,9 +108,9 @@ bool Application::initialize() {
         lightScale = 2.0f;
     }
     else if (dpr > 2.99f) {
-        ssaoScale = 1.5f;
+        ssaoScale = 1.0f;
         shadowScale = 1.0f;
-        lightScale = 1.0f;
+        lightScale = -1.0f;
     }
 
 #ifndef __EMSCRIPTEN__
@@ -158,7 +155,7 @@ void Application::initGame() {
     std::array<std::array<int, 4>, 4> start = { {
         {0, 0, 0, 0},
         {0, 0, 2, 0},
-        {0, 11, 0, 0},
+        {0, 0, 0, 0},
         {0, 0, 0, 0}
     } };
     game.setBoard(start);
@@ -168,24 +165,26 @@ void Application::initGame() {
     // Initialize Rendering
     int ssaoResScaled = SCALE_RES(RES_SSAO, ssaoScale);
     int shadowResScaled = SCALE_RES(RES_SHADOWMAP, shadowScale);
-    int lightResScaled = SCALE_RES(RES_LIGHTING, lightScale);
-
-    positionPass.initialize(ssaoResScaled, ssaoResScaled);
-    normalPass.initialize(ssaoResScaled, ssaoResScaled);
-    GLuint gBuffer[2] = { positionPass.getTexture(), normalPass.getTexture() };
-    ssaoPass.initialize(ssaoResScaled, ssaoResScaled, static_cast<const void*>(gBuffer));
 
     shadowPass.initialize(shadowResScaled, shadowResScaled);
-    GLuint shadowMap[2] = { shadowPass.getTexture(), (GLuint)shadowResScaled };
+    positionPass.initialize(ssaoResScaled, ssaoResScaled);
 
-    lightingPass.initialize(lightResScaled, lightResScaled, static_cast<const void*>(shadowMap));
+    GLuint lightingPassInput[3] = {
+        shadowPass.getTexture(), 
+        (GLuint)shadowResScaled, 
+        positionPass.getTexture()
+    };
+    
+    int ssaaWidth = lightScale > 0.0f ? canvasW * lightScale : -1;
+    int ssaaHeight = lightScale > 0.0f ? canvasH * lightScale : -1;
+
+    lightingPass.initialize(ssaaWidth, ssaaHeight, static_cast<const void*>(lightingPassInput));
+    textRenderer.initialize(canvasW, canvasH);
 
     fullscreenQuadMesh = Mesh::GenFullscreenQuad();
     fullscreenQuadShader = Shader::Load(
         "shaders/fullscreen-quad-vs.glsl",
         "shaders/fullscreen-quad-fs.glsl");
-
-    textRenderer.initialize(canvasW, canvasH);
 }
 
 bool Application::isRunning() {
@@ -212,42 +211,29 @@ void Application::mainLoop() {
 
     view.update(dt);
 
-    // 1) Maps
-    // [ COMPLETE ] shadow pass -> shadowmap (light camera depth)
-    // [ COMPLETE ] position pass -> position map
-    // [ COMPLETE ] normal pass -> normal map
-    // 
-    // 2) SSAO
-    // [ COMPLETE ] ssao pass (position map, normal map) -> occlusion map
-    // [ TODO ]     blur ssao pass (occlusion map) -> blurred occlusion map
-    // 
-    // 3) Main
-    // [ COMPLETE ] lighting pass (shadowMap) -> result
-    // [ COMPLETE ] post processing (result, blurred occlusion map) -> draw
-
     // Update Render Passes
     shadowPass.render();
-    lightingPass.render();
     positionPass.render();
-    normalPass.render();
-    ssaoPass.render();
 
     // Drawing result
-    glViewport(0, 0, canvasW, canvasH);
-    fullscreenQuadShader.use();
-    fullscreenQuadMesh.use();
+    bool lightingPassIsMain = lightingPass.getWidth() == -1 || lightingPass.getHeight() == -1;
+    if (lightingPassIsMain) {
+        glViewport(0, 0, canvasW, canvasH);
+        lightingPass.render();
+    }
+    else {
+        lightingPass.render();
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, lightingPass.getTexture());
-    fullscreenQuadShader.setUniform1i("source", 0);
+        glViewport(0, 0, canvasW, canvasH);
+        fullscreenQuadShader.use();
+        fullscreenQuadMesh.use();
 
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, ssaoPass.getTexture());
-    fullscreenQuadShader.setUniform1i("ssaoMap", 1);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, lightingPass.getTexture());
+        fullscreenQuadShader.setUniform1i("source", 0);
 
-    fullscreenQuadShader.setUniform1f("ssaoPower", 0.8f);
-
-    glDrawArrays(GL_TRIANGLES, 0, fullscreenQuadMesh.vertexCount);
+        glDrawArrays(GL_TRIANGLES, 0, fullscreenQuadMesh.vertexCount);
+    }
     // =============== //
 
     // Drawing text
@@ -256,9 +242,9 @@ void Application::mainLoop() {
     textRenderer.draw("res: " + std::to_string(canvasW) + "x" + std::to_string(canvasH), 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
     if (dpr != -1)
         textRenderer.draw("dpr: " + std::to_string(dpr), 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
-    textRenderer.draw("ssaoScale: " + std::to_string(ssaoScale), 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
-    textRenderer.draw("shadowScale: " + std::to_string(shadowScale), 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
-    textRenderer.draw("lightScale: " + std::to_string(lightScale), 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
+    textRenderer.draw("shadow: " + std::to_string(shadowPass.getWidth()) + "x" + std::to_string(shadowPass.getHeight()) + " (" + std::to_string(shadowScale) + ")", 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
+    textRenderer.draw("gPosition: " + std::to_string(positionPass.getWidth()) + "x" + std::to_string(positionPass.getHeight()) + " (" + std::to_string(ssaoScale) + ")", 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
+    textRenderer.draw("lighting: " + std::to_string(lightingPass.getWidth()) + "x" + std::to_string(lightingPass.getHeight()) + " (" + std::to_string(lightScale) + ")", 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
     // =============== //
 
     glfwSwapBuffers(window);

@@ -56,8 +56,6 @@ private:
     RenderPassLighting lightingPass;
     RenderPassShadow shadowPass;
     RenderPassPosition positionPass;
-    RenderPassNormal normalPass;
-    RenderPassSSAO ssaoPass;
 
     Mesh fullscreenQuadMesh;
     Shader fullscreenQuadShader;

@@ -23,4 +23,20 @@ private:
 	const Light& light;
 	GLuint shadowMapTex;
 	GLuint shadowMapRes;
+	GLuint gPosition;
+	GLuint noiseTex;
+	static const int ssaoKernelSize = 64;
+	float ssaoKernelData[ssaoKernelSize * 3];
+
+	inline void preRender() const {
+		if (width != -1 && height != -1) {
+			glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+			glViewport(0, 0, width, height);
+		}
+	}
+
+	inline void postRender() const {
+		if (width != -1 && height != -1)
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
 };
