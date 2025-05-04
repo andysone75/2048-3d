@@ -5,6 +5,7 @@
 #else
 #include <GL/glew.h>
 #endif
+
 #include <GLFW/glfw3.h>
 
 #include "Engine.h"
@@ -32,8 +33,10 @@ private:
     GLFWwindow* window;
     int canvasW = 720;
     int canvasH = 1280;
-    float dpi;
-    float devicePixelRatio = -1;
+    float dpr = -1;
+    float ssaoScale = 1.0f;
+    float shadowScale = 1.0f;
+    float lightScale = 1.0f;
 
     float lastTime;
     float cameraAngle = 25.0f;

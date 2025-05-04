@@ -14,7 +14,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#define SHADOWMAP_RES 512
+#define RES_LIGHTING  1024
+#define RES_SHADOWMAP 1024
+#define RES_SSAO      1024
+#define SCALE_RES(res, scale) static_cast<int>((float)res * scale);
 
 inline glm::vec3 getCameraPos(float angle, float radius, float height) {
     return { cos(glm::radians(angle)) * radius, height, sin(glm::radians(angle)) * radius };
@@ -97,13 +100,21 @@ bool Application::initialize() {
     glfwInit();
     //glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    dpi = getDPI();
-    devicePixelRatio = getDevicePixelRatio();
-    // Attempt to adjust resolution via DPI for IPhone
-    //canvasW = int(canvasW / (float)devicePixelRatio);
-    //canvasH = int(canvasH / (float)devicePixelRatio);
     window = glfwCreateWindow(canvasW, canvasH, "City 2048", nullptr, nullptr);
     glfwMakeContextCurrent(window);
+
+    dpr = getDevicePixelRatio();
+
+    if (dpr < 1.01f) {
+        ssaoScale = 2.0f;
+        shadowScale = 2.0f;
+        lightScale = 2.0f;
+    }
+    else if (dpr > 2.99f) {
+        ssaoScale = 1.5f;
+        shadowScale = 1.0f;
+        lightScale = 1.0f;
+    }
 
 #ifndef __EMSCRIPTEN__
     glewExperimental = GL_TRUE;
@@ -145,24 +156,29 @@ void Application::initGame() {
     light.farZ = 10.0f;
 
     std::array<std::array<int, 4>, 4> start = { {
-        {0, 0, 0, 11},
         {0, 0, 0, 0},
-        {0, 0, 0, 0},
+        {0, 0, 2, 0},
+        {0, 11, 0, 0},
         {0, 0, 0, 0}
     } };
     game.setBoard(start);
     game.addRandom();
     view.updateBoardFast();
 
-    shadowPass.initialize(SHADOWMAP_RES, SHADOWMAP_RES);
-    positionPass.initialize(canvasW, canvasH);
-    normalPass.initialize(canvasW, canvasH);
+    // Initialize Rendering
+    int ssaoResScaled = SCALE_RES(RES_SSAO, ssaoScale);
+    int shadowResScaled = SCALE_RES(RES_SHADOWMAP, shadowScale);
+    int lightResScaled = SCALE_RES(RES_LIGHTING, lightScale);
 
-    GLuint shadowMap[2] = { shadowPass.getTexture(), (GLuint)SHADOWMAP_RES };
+    positionPass.initialize(ssaoResScaled, ssaoResScaled);
+    normalPass.initialize(ssaoResScaled, ssaoResScaled);
     GLuint gBuffer[2] = { positionPass.getTexture(), normalPass.getTexture() };
+    ssaoPass.initialize(ssaoResScaled, ssaoResScaled, static_cast<const void*>(gBuffer));
 
-    lightingPass.initialize(canvasW, canvasH, static_cast<const void*>(shadowMap));
-    ssaoPass.initialize(canvasW, canvasH, static_cast<const void*>(gBuffer));
+    shadowPass.initialize(shadowResScaled, shadowResScaled);
+    GLuint shadowMap[2] = { shadowPass.getTexture(), (GLuint)shadowResScaled };
+
+    lightingPass.initialize(lightResScaled, lightResScaled, static_cast<const void*>(shadowMap));
 
     fullscreenQuadMesh = Mesh::GenFullscreenQuad();
     fullscreenQuadShader = Shader::Load(
@@ -236,11 +252,13 @@ void Application::mainLoop() {
 
     // Drawing text
     int logCounter = 0;
-    textRenderer.draw("fps: " + std::to_string(fps), 25.0f, 250.0f + (logCounter++) * 50.0f, 1.0f, glm::vec3(0, 1, 0));
-    textRenderer.draw("dpi: " + std::to_string(dpi), 25.0f, 250.0f + (logCounter++) * 50.0f, 1.0f, glm::vec3(0, 1, 0));
-    if (devicePixelRatio != -1)
-        textRenderer.draw("devicePixelRatio: " + std::to_string(devicePixelRatio), 25.0f, 250.0f + (logCounter++) * 50.0f, 1.0f, glm::vec3(0, 1, 0));
-    textRenderer.draw("res: " + std::to_string(canvasW) + "x" + std::to_string(canvasH), 25.0f, 250.0f + (logCounter++) * 50.0f, 1.0f, glm::vec3(0, 1, 0));
+    textRenderer.draw("fps: " + std::to_string(fps), 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
+    textRenderer.draw("res: " + std::to_string(canvasW) + "x" + std::to_string(canvasH), 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
+    if (dpr != -1)
+        textRenderer.draw("dpr: " + std::to_string(dpr), 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
+    textRenderer.draw("ssaoScale: " + std::to_string(ssaoScale), 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
+    textRenderer.draw("shadowScale: " + std::to_string(shadowScale), 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
+    textRenderer.draw("lightScale: " + std::to_string(lightScale), 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
     // =============== //
 
     glfwSwapBuffers(window);
