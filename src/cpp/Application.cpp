@@ -18,6 +18,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "Utils.h"
 
 //#define ENABLE_IMGUI
 #define SCALE_RES(res, scale) static_cast<int>((float)res * scale);
@@ -48,10 +49,10 @@ inline glm::vec3 getCameraPos(float angle, float radius, float height) {
 
 void Application::keyCallback(int key, int action) {
     if (action == GLFW_PRESS) {
-        bool u = GLFW_KEY_UP == key;
-        bool r = GLFW_KEY_RIGHT == key;
-        bool d = GLFW_KEY_DOWN == key;
-        bool l = GLFW_KEY_LEFT == key;
+        bool u = moveInputs[0] == key;
+        bool r = moveInputs[1] == key;
+        bool d = moveInputs[2] == key;
+        bool l = moveInputs[3] == key;
 
         if (u || r || d || l) {
             if (u) game.goUp();
@@ -64,12 +65,49 @@ void Application::keyCallback(int key, int action) {
                 view.updateBoard();
             }
         }
+
+        if (key == GLFW_KEY_D) {
+            cameraAngleOffset -= 90.0f;
+
+            int first = moveInputs[0];
+            for (int i = 0; i < 3; ++i)
+                moveInputs[i] = moveInputs[i + 1];
+            moveInputs[3] = first;
+        }
+        else if (key == GLFW_KEY_A) {
+            cameraAngleOffset += 90.0f;
+
+            int last = moveInputs[3];
+            for (int i = 3; i > 0; --i)
+                moveInputs[i] = moveInputs[i - 1];
+            moveInputs[0] = last;
+        }
+    }
+}
+
+void Application::mouseCallback(int button, int action) {
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+        if (action == GLFW_PRESS) {
+            double startX, startY;
+            glfwGetCursorPos(window, &startX, &startY);
+            swipeDetector.onMouseDown(glm::vec2(startX, startY));
+        }
+        else if (action == GLFW_RELEASE) {
+            double endX, endY;
+            glfwGetCursorPos(window, &endX, &endY);
+            swipeDetector.onMouseUp(glm::vec2(endX, endY));
+        }
     }
 }
 
 void keyCallbackWrapper(GLFWwindow* window, int key, int scancode, int action, int mods) {
     auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
     app->keyCallback(key, action);
+}
+
+void mouseCallbackWrapper(GLFWwindow* window, int button, int action, int modds) {
+    auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+    app->mouseCallback(button, action);
 }
 
 void APIENTRY debugCallback(GLenum source, GLenum type, GLuint id,
@@ -147,19 +185,18 @@ bool Application::initialize() {
     //glEnable(GL_DEBUG_OUTPUT);
     //glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     //glDebugMessageCallback(debugCallback, nullptr);
+
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 100");
 #else
     glfwSwapInterval(0);
 #endif
 
     glfwSetWindowUserPointer(window, this);
     glfwSetKeyCallback(window, keyCallbackWrapper);
-
-#ifndef __EMSCRIPTEN__
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 100");
-#endif
+    glfwSetMouseButtonCallback(window, mouseCallbackWrapper);
 
     ssaoRadius = SSAO_RADIUS;
     ssaoBias = SSAO_BIAS;
@@ -178,6 +215,7 @@ void Application::initGame() {
     camera.aspect = (float)canvasW / (float)canvasH;
     camera.nearZ = .01f;
     camera.farZ = 50.0f;
+    cameraAngle = cameraStartAngle;
 
     glm::vec3 lightCamOffset = cameraOffset + glm::vec3(0, 1, 0) * 0.9f;
     glm::vec3 lightDir = glm::vec3(-0.32f, -0.77f, 0.56);
@@ -236,17 +274,49 @@ void Application::mainLoop() {
     int fps = static_cast<int>(1.0f / dt);
 
     // Game logic
-    float cameraDirection = 0;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        cameraDirection = -1;
-    else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        cameraDirection = 1;
-
-    float angleDelta = cameraDirection * cameraSpeed * dt;
-    cameraAngle += cameraDirection * cameraSpeed * dt;
+    cameraAngle = Utils::lerp(cameraAngle, cameraStartAngle + cameraAngleOffset, dt * 15.0f);
     camera.position = cameraOffset + getCameraPos(cameraAngle, cameraRadius, cameraHeight);
-
     view.update(dt);
+
+    if (swipeDetector.checkSwipe()) {
+        const Swipe& swipe = swipeDetector.getSwipe();
+        if (swipe.getLength() >= 10.0f && swipe.time >= 0.01f && swipe.time <= 1.0f) {
+            glm::vec2 direction = swipe.getDirection();
+
+            glm::vec4 dir = glm::vec4(direction.x, direction.y, 0.0f, 0.0f);
+            glm::mat4 rotation = glm::rotate(glm::mat4(1), glm::radians(cameraAngleOffset), glm::vec3(0, 0, 1));
+            dir = rotation * dir;
+            direction.x = dir.x;
+            direction.y = dir.y;
+
+            float inputs[4] = {
+                glm::dot(direction, glm::vec2(0.0f, -1.0f)),
+                glm::dot(direction, glm::vec2(1.0f, 0.0f)),
+                glm::dot(direction, glm::vec2(0.0f, 1.0f)),
+                glm::dot(direction, glm::vec2(-1.0f, 0.0f))
+            };
+
+            int indexMax = 0;
+            if (inputs[1] > inputs[indexMax]) indexMax = 1;
+            if (inputs[2] > inputs[indexMax]) indexMax = 2;
+            if (inputs[3] > inputs[indexMax]) indexMax = 3;
+
+            bool u = indexMax == 0;
+            bool r = indexMax == 1;
+            bool d = indexMax == 2;
+            bool l = indexMax == 3;
+
+            if (u) game.goUp();
+            else if (r) game.goLeft();
+            else if (d) game.goDown();
+            else game.goRight();
+
+            if (game.boardChanged()) {
+                game.addRandom();
+                view.updateBoard();
+            }
+        }
+    }
 
     // Render
     float lightingParams[5] = { ssaoRadius, ssaoBias, shadingPower, shadowPower, ssaoPower };

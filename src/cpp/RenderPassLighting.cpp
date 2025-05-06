@@ -9,11 +9,7 @@
 #include <iostream>
 #include <random>
 #include "glm/gtc/type_ptr.hpp"
-
-float lerp(float a, float b, float f)
-{
-	return a + f * (b - a);
-}
+#include "Utils.h"
 
 void RenderPassLighting::initialize(GLsizei width, GLsizei height, const void* arg) {
 	RenderPass::initialize(width, height);
@@ -72,7 +68,7 @@ void RenderPassLighting::initialize(GLsizei width, GLsizei height, const void* a
 		sample = glm::normalize(sample);
 		sample *= randomFloats(generator);
 		float scale = (float)i / 64.0;
-		scale = lerp(0.1f, 1.0f, scale * scale);
+		scale = Utils::lerp(0.1f, 1.0f, scale * scale);
 		ssaoKernel.push_back(sample);
 	}
 
