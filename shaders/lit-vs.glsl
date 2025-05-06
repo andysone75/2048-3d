@@ -12,9 +12,6 @@ uniform mat4 view;
 uniform mat4 projection;
 
 // ssao
-uniform vec2 resolution;
-
-varying vec2 noiseScale;
 varying mat3 normalMatrix;
 
 mat3 transpose(mat3 m) {
@@ -52,6 +49,5 @@ void main() {
     gl_Position = projection * view * vec4(vPos, 1.0);
 
     // ssao
-    noiseScale = resolution / 4.0;
     normalMatrix = transpose(inverse(mat3(view * model)));
 }

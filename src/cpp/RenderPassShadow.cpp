@@ -18,18 +18,9 @@ void RenderPassShadow::initialize(GLsizei width, GLsizei height, const void* arg
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	// compile error on Emscripten
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	//float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
-	//glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-
 	glGenFramebuffers(1, &fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texture, 0);
-
-	//glDrawBuffer(GL_NONE); // compile error on Emscripten
-	glReadBuffer(GL_NONE);
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
 		std::cerr << "Framebuffer not complete!" << std::endl;
@@ -37,7 +28,7 @@ void RenderPassShadow::initialize(GLsizei width, GLsizei height, const void* arg
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	depthShader = Shader::Load("shaders/depth-vert.glsl", "shaders/depth-frag.glsl");
+	depthShader = Shader::Load("shaders/depth-vs.glsl", "shaders/depth-fs.glsl");
 }
 
 void RenderPassShadow::render(const void* arg) const {
@@ -46,6 +37,8 @@ void RenderPassShadow::render(const void* arg) const {
 	glViewport(0, 0, width, height);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
+
+	glReadBuffer(GL_NONE);
 
 	glm::mat4 view = light.getViewMatrix();
 	glm::mat4 proj = light.getProjectionMatrixOrtho();

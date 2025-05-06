@@ -4,9 +4,14 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #else
+// for dpi
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+// imgui
+#include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_opengl3.h"
 #endif
 
 #include <iostream>
@@ -14,9 +19,28 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+//#define ENABLE_IMGUI
+#define SCALE_RES(res, scale) static_cast<int>((float)res * scale);
+
 #define RES_SHADOWMAP 1024
 #define RES_SSAO      1024
-#define SCALE_RES(res, scale) static_cast<int>((float)res * scale);
+
+#ifdef __EMSCRIPTEN__
+#define POWER_SHADING   0.3f;
+#define POWER_SHADOW    0.2f;
+#define POWER_OCCLUSION 1.9f;
+#else
+#define POWER_SHADING   0.15f;
+#define POWER_SHADOW    0.2f;
+#define POWER_OCCLUSION 1.5f;
+#endif
+
+#ifdef __EMSCRIPTEN__
+#define SSAO_RADIUS 0.04f;
+#else
+#define SSAO_RADIUS 0.06f;
+#endif
+#define SSAO_BIAS   0.04f;
 
 inline glm::vec3 getCameraPos(float angle, float radius, float height) {
     return { cos(glm::radians(angle)) * radius, height, sin(glm::radians(angle)) * radius };
@@ -110,7 +134,7 @@ bool Application::initialize() {
     else if (dpr > 2.99f) {
         ssaoScale = 1.0f;
         shadowScale = 1.0f;
-        lightScale = -1.0f;
+        lightScale = 1.0f;
     }
 
 #ifndef __EMSCRIPTEN__
@@ -130,6 +154,19 @@ bool Application::initialize() {
     glfwSetWindowUserPointer(window, this);
     glfwSetKeyCallback(window, keyCallbackWrapper);
 
+#ifndef __EMSCRIPTEN__
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 100");
+#endif
+
+    ssaoRadius = SSAO_RADIUS;
+    ssaoBias = SSAO_BIAS;
+    shadingPower = POWER_SHADING;
+    shadowPower = POWER_SHADOW;
+    ssaoPower = POWER_OCCLUSION;
+
     return true;
 }
 
@@ -140,7 +177,7 @@ void Application::initGame() {
     camera.fovY = 11;
     camera.aspect = (float)canvasW / (float)canvasH;
     camera.nearZ = .01f;
-    camera.farZ = 100.0f;
+    camera.farZ = 50.0f;
 
     glm::vec3 lightCamOffset = cameraOffset + glm::vec3(0, 1, 0) * 0.9f;
     glm::vec3 lightDir = glm::vec3(-0.32f, -0.77f, 0.56);
@@ -175,8 +212,8 @@ void Application::initGame() {
         positionPass.getTexture()
     };
     
-    int ssaaWidth = lightScale > 0.0f ? canvasW * lightScale : -1;
-    int ssaaHeight = lightScale > 0.0f ? canvasH * lightScale : -1;
+    int ssaaWidth = canvasW * lightScale;
+    int ssaaHeight = canvasH * lightScale;
 
     lightingPass.initialize(ssaaWidth, ssaaHeight, static_cast<const void*>(lightingPassInput));
     textRenderer.initialize(canvasW, canvasH);
@@ -211,30 +248,20 @@ void Application::mainLoop() {
 
     view.update(dt);
 
-    // Update Render Passes
+    // Render
+    float lightingParams[5] = { ssaoRadius, ssaoBias, shadingPower, shadowPower, ssaoPower };
     shadowPass.render();
     positionPass.render();
+    lightingPass.render(lightingParams);
 
     // Drawing result
-    bool lightingPassIsMain = lightingPass.getWidth() == -1 || lightingPass.getHeight() == -1;
-    if (lightingPassIsMain) {
-        glViewport(0, 0, canvasW, canvasH);
-        lightingPass.render();
-    }
-    else {
-        lightingPass.render();
-
-        glViewport(0, 0, canvasW, canvasH);
-        fullscreenQuadShader.use();
-        fullscreenQuadMesh.use();
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, lightingPass.getTexture());
-        fullscreenQuadShader.setUniform1i("source", 0);
-
-        glDrawArrays(GL_TRIANGLES, 0, fullscreenQuadMesh.vertexCount);
-    }
-    // =============== //
+    glViewport(0, 0, canvasW, canvasH);
+    fullscreenQuadShader.use();
+    fullscreenQuadMesh.use();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, lightingPass.getTexture());
+    fullscreenQuadShader.setUniform1i("source", 0);
+    glDrawArrays(GL_TRIANGLES, 0, fullscreenQuadMesh.vertexCount);
 
     // Drawing text
     int logCounter = 0;
@@ -245,7 +272,43 @@ void Application::mainLoop() {
     textRenderer.draw("shadow: " + std::to_string(shadowPass.getWidth()) + "x" + std::to_string(shadowPass.getHeight()) + " (" + std::to_string(shadowScale) + ")", 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
     textRenderer.draw("gPosition: " + std::to_string(positionPass.getWidth()) + "x" + std::to_string(positionPass.getHeight()) + " (" + std::to_string(ssaoScale) + ")", 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
     textRenderer.draw("lighting: " + std::to_string(lightingPass.getWidth()) + "x" + std::to_string(lightingPass.getHeight()) + " (" + std::to_string(lightScale) + ")", 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
-    // =============== //
+
+    // ImGui
+#ifdef ENABLE_IMGUI
+#ifndef __EMSCRIPTEN__
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::Begin("SSAO");
+    ImGui::DragFloat("Power", &ssaoPower, 0.01f, 0.0f, 2.0f);
+    ImGui::DragFloat("Radius", &ssaoRadius, 0.01f, 0.0f, 1.0f);
+    ImGui::DragFloat("Bias", &ssaoBias, 0.01f, 0.0f, 1.0f);
+    if (ImGui::Button("Reset")) {
+        ssaoPower = POWER_OCCLUSION;
+        ssaoRadius = SSAO_RADIUS;
+        ssaoBias = SSAO_BIAS;
+    }
+    ImGui::End();
+
+    ImGui::Begin("Shading");
+    ImGui::DragFloat("Power", &shadingPower, 0.01f, 0.0f, 2.0f);
+    if (ImGui::Button("Reset")) {
+        shadingPower = POWER_SHADING;
+    }
+    ImGui::End();
+
+    ImGui::Begin("Shadow");
+    ImGui::DragFloat("Power", &shadowPower, 0.01f, 0.0f, 2.0f);
+    if (ImGui::Button("Reset")) {
+        shadowPower = POWER_SHADOW;
+    }
+    ImGui::End();
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+#endif
+#endif
 
     glfwSwapBuffers(window);
     glfwPollEvents();

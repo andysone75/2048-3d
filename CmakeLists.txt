@@ -33,11 +33,12 @@ if (EMSCRIPTEN)
     )
 
     target_compile_options(index PRIVATE -Werror)
-else()
+else() # Windows debug
 
     set(GLFW_ROOT ${CMAKE_SOURCE_DIR}/glfw)
     set(GLEW_ROOT ${CMAKE_SOURCE_DIR}/glew)
     set(FREETYPE_ROOT ${CMAKE_SOURCE_DIR}/freetype)
+    set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/imgui)
 
     target_include_directories(index PRIVATE "${GLFW_ROOT}/include")
     target_link_directories(index PRIVATE "${GLFW_ROOT}/lib")
@@ -47,6 +48,20 @@ else()
 
     target_include_directories(index PRIVATE "${FREETYPE_ROOT}/include")
     target_link_directories(index PRIVATE "${FREETYPE_ROOT}/lib")
+
+    target_include_directories(index PRIVATE
+        ${IMGUI_DIR}
+        ${IMGUI_DIR}/backends
+    )
+    target_sources(index PRIVATE
+        ${IMGUI_DIR}/imgui.cpp
+        ${IMGUI_DIR}/imgui_draw.cpp
+        ${IMGUI_DIR}/imgui_tables.cpp
+        ${IMGUI_DIR}/imgui_widgets.cpp
+        ${IMGUI_DIR}/imgui_demo.cpp
+        ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
+        ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+    )
 
     target_compile_definitions(index PRIVATE GLEW_STATIC)
     target_link_libraries(index PRIVATE freetype glfw3 glew32s opengl32 gdi32 winmm)

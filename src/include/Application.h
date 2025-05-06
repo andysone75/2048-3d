@@ -45,6 +45,12 @@ private:
     float cameraHeight = 8;
     glm::vec3 cameraOffset = glm::vec3(1.6f, 0.0f, 1.6f);
 
+    float ssaoRadius;
+    float ssaoBias;
+    float ssaoPower;
+    float shadingPower;
+    float shadowPower;
+
     Camera camera;
     Light light;
 
