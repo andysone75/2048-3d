@@ -226,16 +226,14 @@ GLuint compileShader(GLenum type, const char* src) {
     return shader;
 }
 
-Shader Shader::Load(const std::string& vsPath, const std::string& fsPath) {
+Shader Shader::Load(const std::string& vsPath, const std::string& fsPath, const std::vector<std::string>& attribNames) {
     GLuint vs = compileShader(GL_VERTEX_SHADER, loadShaderSource(vsPath).c_str());
     GLuint fs = compileShader(GL_FRAGMENT_SHADER, loadShaderSource(fsPath).c_str());
     GLuint id = glCreateProgram();
 
-    // Check if all working without this commands
-    //glBindAttribLocation(id, 0, "aPosition");
-    //glBindAttribLocation(id, 1, "aNormal");
-    //glBindAttribLocation(id, 2, "aColor");
-    //glBindAttribLocation(id, 3, "aUv");
+    for (int i = 0; i < attribNames.size(); i++) {
+        glBindAttribLocation(id, i, attribNames[i].c_str());
+    }
 
     glAttachShader(id, vs);
     glAttachShader(id, fs);

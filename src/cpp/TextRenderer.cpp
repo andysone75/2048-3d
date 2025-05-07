@@ -13,7 +13,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 bool TextRenderer::initialize(int canvasW, int canvasH) {
-    shader = Shader::Load("shaders/text-vs.glsl", "shaders/text-fs.glsl");
+    shader = Shader::Load("shaders/text-vs.glsl", "shaders/text-fs.glsl", {});
     glm::mat4 projection = glm::ortho(0.0f, (float)canvasW, 0.0f, (float)canvasH);
 
     shader.use();

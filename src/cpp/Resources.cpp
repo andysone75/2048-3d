@@ -6,13 +6,13 @@
 
 #define TEXT_TEXTURE_RESOLUTION 128
 
-Shader loadTextShader() {
-	Shader shader = Shader::Load(
-		"shaders/texture_plane_vs.glsl",
-		"shaders/texture_plane_fs.glsl"
-	);
-	return shader;
-}
+//Shader loadTextShader() {
+//	Shader shader = Shader::Load(
+//		"shaders/texture_plane_vs.glsl",
+//		"shaders/texture_plane_fs.glsl"
+//	);
+//	return shader;
+//}
 
 Model loadModel(
 	Mesh mesh, 
@@ -89,12 +89,14 @@ void Resources::initialize() {
 
 	Shader shaderLit = Shader::Load(
 		"shaders/lit-vs.glsl",
-		"shaders/lit-fs.glsl"
+		"shaders/lit-fs.glsl",
+		{}
 	);
 
 	Shader shaderGradient = Shader::Load(
 		"shaders/gradient-vert.glsl",
-		"shaders/gradient-frag.glsl"
+		"shaders/gradient-frag.glsl",
+		{}
 	);
 
 	litShaders[getShaderIndex(LitShaderType::Color)] = shaderLit;
@@ -105,7 +107,7 @@ void Resources::initialize() {
 	shaderGradient.setUniformVec3("color1", colorToVector3(purple));
 
 	// Text Shaders
-	textShaders[0] = loadTextShader();
+	/*textShaders[0] = loadTextShader();*/
 
 	// Models
 	Model gridCell = loadModel(Mesh::GenCube(white),	 shaderLit, MATRIX_SCALE(1, .3, 1), MATRIX_TRANSLATE(0, 0, 0));

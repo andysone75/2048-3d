@@ -28,7 +28,7 @@ void RenderPassShadow::initialize(GLsizei width, GLsizei height, const void* arg
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	depthShader = Shader::Load("shaders/depth-vs.glsl", "shaders/depth-fs.glsl");
+	depthShader = Shader::Load("shaders/depth-vs.glsl", "shaders/depth-fs.glsl", {});
 }
 
 void RenderPassShadow::render(const void* arg) const {

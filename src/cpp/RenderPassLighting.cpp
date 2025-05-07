@@ -51,7 +51,7 @@ void RenderPassLighting::initialize(GLsizei width, GLsizei height, const void* a
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	depthShader = Shader::Load("shaders/depth-vs.glsl", "shaders/depth-fs.glsl");
+	depthShader = Shader::Load("shaders/depth-vs.glsl", "shaders/depth-fs.glsl", {});
 
 	// SSAO
 	uniform_real_distribution<float> randomFloats(0.0, 1.0);

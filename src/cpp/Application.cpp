@@ -259,7 +259,8 @@ void Application::initGame() {
     fullscreenQuadMesh = Mesh::GenFullscreenQuad();
     fullscreenQuadShader = Shader::Load(
         "shaders/fullscreen-quad-vs.glsl",
-        "shaders/fullscreen-quad-fs.glsl");
+        "shaders/fullscreen-quad-fs.glsl",
+        {"aPos", "aTexCoord"});
 }
 
 bool Application::isRunning() {

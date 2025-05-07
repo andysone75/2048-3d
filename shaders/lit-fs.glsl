@@ -74,7 +74,7 @@ void main() {
 	occlusion = occlusion / float(samplesCount);
 
     //float shading = clamp((1.0 - diff) * shadingPower + shadow * shadowPower + occlusion * ssaoPower, 0.0, 1.0);
-    float shading = clamp((1.0 - diff) * shadingPower + shadow * shadowPower, 0.0, 1.0);
+    float shading = clamp((1.0 - diff) * shadingPower + shadow * shadowPower, 0.0, 1.0); // Temporary remove SSAO
     vec3 result = vColor.rgb * (1.0 - shading);
 
     gl_FragColor = vec4(result, 1.0);

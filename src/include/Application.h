@@ -33,8 +33,8 @@ public:
 
 private:
     GLFWwindow* window;
-    int canvasW = 720;
-    int canvasH = 1280;
+    int canvasW = 576;
+    int canvasH = 1024;
     float dpr = -1;
     float ssaoScale = 1.0f;
     float shadowScale = 1.0f;

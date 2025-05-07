@@ -10,6 +10,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <string>
+#include <vector>
 
 #define WHITE Color{ 255, 255, 255, 255 }
 #define GET_UNIFORM_LOCATION(programID, uniformName) glGetUniformLocation(programID, uniformName)
@@ -35,7 +36,7 @@ struct Mesh {
 struct Shader {
 	GLuint id;
 
-	static Shader Load(const std::string& vsPath, const std::string& fsPath);
+	static Shader Load(const std::string& vsPath, const std::string& fsPath, const std::vector<std::string>& attribNames);
 
 	inline void use() const { glUseProgram(id); }
 	

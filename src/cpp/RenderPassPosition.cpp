@@ -34,7 +34,7 @@ void RenderPassPosition::initialize(GLsizei width, GLsizei height, const void* a
 		std::cerr << "Framebuffer not complete!" << std::endl;
 	}
 
-	positionShader = Shader::Load("shaders/position-vs.glsl", "shaders/position-fs.glsl");
+	positionShader = Shader::Load("shaders/position-vs.glsl", "shaders/position-fs.glsl", {});
 	
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
