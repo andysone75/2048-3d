@@ -20,7 +20,6 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "Utils.h"
 
-//#define ENABLE_IMGUI
 #define SCALE_RES(res, scale) static_cast<int>((float)res * scale);
 
 #define RES_SHADOWMAP 1024
@@ -86,18 +85,27 @@ void Application::keyCallback(int key, int action) {
 }
 
 void Application::mouseCallback(int button, int action) {
+    double posX, posY;
+    glfwGetCursorPos(window, &posX, &posY);
+
+    glm::vec2 position = glm::vec2(posX, posY);
+
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
         if (action == GLFW_PRESS) {
-            double startX, startY;
-            glfwGetCursorPos(window, &startX, &startY);
-            swipeDetector.onMouseDown(glm::vec2(startX, startY));
+            swipeDetector.onMouseDown(position);
         }
         else if (action == GLFW_RELEASE) {
-            double endX, endY;
-            glfwGetCursorPos(window, &endX, &endY);
-            swipeDetector.onMouseUp(glm::vec2(endX, endY));
+            swipeDetector.onMouseUp(position);
         }
     }
+
+    ui.mouseCallback(button, action, position);
+}
+
+void Application::restartGame() {
+    game.reset();
+    game.addRandom();
+    view.updateBoardFast();
 }
 
 void keyCallbackWrapper(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -116,25 +124,16 @@ void APIENTRY debugCallback(GLenum source, GLenum type, GLuint id,
     std::cerr << "GL DEBUG: " << message << "\n";
 }
 
-float getDPI() {
-    float dpi = 0;
-
-#ifndef __EMSCRIPTEN__
-    HDC screen = GetDC(0);
-    dpi = GetDeviceCaps(screen, LOGPIXELSX);
-    ReleaseDC(0, screen);
-#else
-    dpi = emscripten_run_script_int("window.devicePixelRatio * 96.0");
-#endif
-    return dpi;
-}
-
-float getDevicePixelRatio() {
-    float ratio = -1;
+float getDPR() {
+    float dpr = -1;
 #ifdef __EMSCRIPTEN__
-    ratio = emscripten_run_script_int("window.devicePixelRatio");
+    dpr = emscripten_run_script_int("window.devicePixelRatio");
+#else
+    HDC screen = GetDC(0);
+    dpr = GetDeviceCaps(screen, LOGPIXELSX) / 96;
+    ReleaseDC(0, screen);
 #endif
-    return ratio;
+    return dpr;
 }
 
 Application::Application(
@@ -162,7 +161,7 @@ bool Application::initialize() {
     window = glfwCreateWindow(canvasW, canvasH, "City 2048", nullptr, nullptr);
     glfwMakeContextCurrent(window);
 
-    dpr = getDevicePixelRatio();
+    dpr = getDPR();
 
     if (dpr < 1.01f) {
         ssaoScale = 2.0f;
@@ -204,6 +203,56 @@ bool Application::initialize() {
     shadowPower = POWER_SHADOW;
     ssaoPower = POWER_OCCLUSION;
 
+    float uiScale = dpr > 1.01f ? dpr * .75f : 1.0f; // Scale 1.0 looks good on dpr == 1, but too large on dpr == 3
+    ui.initialize(canvasW, canvasH, uiScale);
+
+    TextDescription scoreDesc;
+    scoreDesc.position = glm::vec2(canvasW / 2, canvasH / 2 + 350);
+    scoreDesc.alignmentX = 0.5f;
+    scoreText = ui.createText(scoreDesc);
+    
+    scoreDesc.position = glm::vec2(canvasW / 2, canvasH / 2 + 350 + 50 * uiScale);
+    scoreDesc.scale = 0.8f;
+    scoreDesc.color = glm::vec3(1) * .8f;
+    bestScoreText = ui.createText(scoreDesc);
+
+    ImageDescription restartButtonDesc;
+    restartButtonDesc.scale = .75f;
+    restartButtonDesc.alignmentY = 1.0f;
+    restartButtonDesc.position = glm::vec2(5, canvasH - 5);
+    restartButton = ui.createImage(restartButtonDesc, "textures/restart-icon.png");
+
+    ui.createButton(restartButton, [this]() { restartGame(); });
+
+#ifdef ENABLE_ONSCREEN_LOG
+    int logCounter = 0;
+    int logShift = 35;
+    int logPad = 35;
+    
+    TextDescription logDesc;
+    logDesc.scale = .5f;
+    
+    logDesc.position = glm::vec2(25.0f, canvasH - (logCounter++) * logShift - logPad);
+    fpsText = ui.createText(logDesc);
+    
+    if (dpr != -1) {
+        logDesc.position = glm::vec2(25.0f, canvasH - (logCounter++) * logShift - logPad);
+        dprText = ui.createText(logDesc);
+    }
+
+    logDesc.position = glm::vec2(25.0f, canvasH - (logCounter++) * logShift - logPad);
+    resText = ui.createText(logDesc);
+
+    logDesc.position = glm::vec2(25.0f, canvasH - (logCounter++) * logShift - logPad);
+    shadowText = ui.createText(logDesc);
+
+    logDesc.position = glm::vec2(25.0f, canvasH - (logCounter++) * logShift - logPad);
+    gPositionText = ui.createText(logDesc);
+
+    logDesc.position = glm::vec2(25.0f, canvasH - (logCounter++) * logShift - logPad);
+    lightingText = ui.createText(logDesc);
+#endif
+
     return true;
 }
 
@@ -229,7 +278,7 @@ void Application::initGame() {
 
     std::array<std::array<int, 4>, 4> start = { {
         {0, 0, 0, 0},
-        {0, 0, 2, 0},
+        {0, 0, 0, 0},
         {0, 0, 0, 0},
         {0, 0, 0, 0}
     } };
@@ -254,7 +303,6 @@ void Application::initGame() {
     int ssaaHeight = canvasH * lightScale;
 
     lightingPass.initialize(ssaaWidth, ssaaHeight, static_cast<const void*>(lightingPassInput));
-    textRenderer.initialize(canvasW, canvasH);
 
     fullscreenQuadMesh = Mesh::GenFullscreenQuad();
     fullscreenQuadShader = Shader::Load(
@@ -278,6 +326,18 @@ void Application::mainLoop() {
     cameraAngle = Utils::lerp(cameraAngle, cameraStartAngle + cameraAngleOffset, dt * 15.0f);
     camera.position = cameraOffset + getCameraPos(cameraAngle, cameraRadius, cameraHeight);
     view.update(dt);
+    ui.getText(scoreText).value = std::to_string(game.getScore());
+    ui.getText(bestScoreText).value = std::to_string(game.getScore());
+    
+#ifdef ENABLE_ONSCREEN_LOG
+    ui.getText(fpsText).value = "fps: " + std::to_string(fps);
+    ui.getText(resText).value = "res: " + std::to_string(canvasW) + "x" + std::to_string(canvasH);
+    ui.getText(shadowText).value = "shadow: " + std::to_string(shadowPass.getWidth()) + "x" + std::to_string(shadowPass.getHeight()) + " (" + std::to_string(shadowScale) + ")";
+    ui.getText(gPositionText).value = "gPosition: " + std::to_string(positionPass.getWidth()) + "x" + std::to_string(positionPass.getHeight()) + " (" + std::to_string(ssaoScale) + ")";
+    ui.getText(lightingText).value = "lighting: " + std::to_string(lightingPass.getWidth()) + "x" + std::to_string(lightingPass.getHeight()) + " (" + std::to_string(lightScale) + ")";
+    if (dpr != -1)
+        ui.getText(dprText).value = "dpr: " + std::to_string(dpr);
+#endif
 
     if (swipeDetector.checkSwipe()) {
         const Swipe& swipe = swipeDetector.getSwipe();
@@ -334,15 +394,7 @@ void Application::mainLoop() {
     fullscreenQuadShader.setUniform1i("source", 0);
     glDrawArrays(GL_TRIANGLES, 0, fullscreenQuadMesh.vertexCount);
 
-    // Drawing text
-    int logCounter = 0;
-    textRenderer.draw("fps: " + std::to_string(fps), 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
-    textRenderer.draw("res: " + std::to_string(canvasW) + "x" + std::to_string(canvasH), 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
-    if (dpr != -1)
-        textRenderer.draw("dpr: " + std::to_string(dpr), 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
-    textRenderer.draw("shadow: " + std::to_string(shadowPass.getWidth()) + "x" + std::to_string(shadowPass.getHeight()) + " (" + std::to_string(shadowScale) + ")", 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
-    textRenderer.draw("gPosition: " + std::to_string(positionPass.getWidth()) + "x" + std::to_string(positionPass.getHeight()) + " (" + std::to_string(ssaoScale) + ")", 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
-    textRenderer.draw("lighting: " + std::to_string(lightingPass.getWidth()) + "x" + std::to_string(lightingPass.getHeight()) + " (" + std::to_string(lightScale) + ")", 25.0f, canvasH - (logCounter++) * 50.0f - 50.0f, 1.0f, glm::vec3(0, 1, 0));
+    ui.render();
 
     // ImGui
 #ifdef ENABLE_IMGUI

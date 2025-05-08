@@ -1,5 +1,4 @@
-#ifndef GAME2048_H
-#define GAME2048_H
+#pragma once
 
 #include <array>
 #include <vector>
@@ -13,6 +12,7 @@ struct TileMove {
 class Game2048 {
 private:
     int maxLevel;
+    int score = 0;
     std::array<std::array<int, 4>, 4> board;
     std::array<std::array<int, 4>, 4> boardBeforeMove;
     std::vector<TileMove> lastMoves;
@@ -39,6 +39,6 @@ public:
 
     void addRandom();
     void printBoard() const;
+    int getScore() const;
+    void reset();
 };
-
-#endif // GAME2048_H

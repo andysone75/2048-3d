@@ -98,6 +98,7 @@ void Game2048::moveLeft() {
 
             if (j + 1 < tiles.size() && value == tiles[j + 1].first && value < maxLevel) {
                 value += 1;
+                score += (1 << value);
                 lastMoves.push_back({i, fromCol, i, targetCol, true});
                 lastMoves.push_back({i, tiles[j + 1].second, i, targetCol, true});
                 ++j;
@@ -167,4 +168,15 @@ const std::array<std::array<int, 4>, 4>& Game2048::getPreviousBoard() const {
 
 bool Game2048::boardChanged() const {
     return board != boardBeforeMove;
+}
+
+int Game2048::getScore() const {
+    return score;
+}
+
+void Game2048::reset() {
+    score = 0;
+    board = {};
+    boardBeforeMove = {};
+    lastMoves.clear();
 }

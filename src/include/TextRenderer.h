@@ -14,7 +14,7 @@ struct Character {
 class TextRenderer {
 public:
 	bool initialize(int canvasW, int canvasH);
-	void draw(std::string text, float x, float y, float scale, glm::vec3 color);
+	void draw(std::string text, float x, float y, float scale, glm::vec3 color, float alignmentX = 0.0f);
 
 private:
     Shader shader;

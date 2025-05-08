@@ -9,9 +9,11 @@ include(CheckLibraryExists)
 
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS src/cpp/*.cpp)
 add_executable(index src/main.cpp ${SRC_FILES})
+
 target_include_directories(index PRIVATE
     ${CMAKE_SOURCE_DIR}/src/include
-    ${CMAKE_SOURCE_DIR}/glm)
+    ${CMAKE_SOURCE_DIR}/glm
+    ${CMAKE_SOURCE_DIR}/stb)
 
 if (EMSCRIPTEN)
     set_target_properties(index PROPERTIES SUFFIX ".html")
@@ -19,6 +21,7 @@ if (EMSCRIPTEN)
 
     set(EMSCRIPTEN_PRELOAD_DIR "${CMAKE_SOURCE_DIR}/shaders")
     set(FONTS_DIR "${CMAKE_SOURCE_DIR}/fonts")
+    set(TEXTURES_DIR "${CMAKE_SOURCE_DIR}/textures")
 
     target_link_options(index PRIVATE
         "-sUSE_GLFW=3"
@@ -28,6 +31,7 @@ if (EMSCRIPTEN)
         "-sALLOW_MEMORY_GROWTH=1"
         "--preload-file=${EMSCRIPTEN_PRELOAD_DIR}@/shaders"
         "--preload-file=${FONTS_DIR}@/fonts"
+        "--preload-file=${TEXTURES_DIR}@/textures"
         "--shell-file=${CMAKE_SOURCE_DIR}/index.html"
         # "-sUSE_WEBGL2=1"
     )
@@ -63,7 +67,10 @@ else() # Windows debug
         ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
     )
 
-    target_compile_definitions(index PRIVATE GLEW_STATIC)
+    target_compile_definitions(index PRIVATE 
+        GLEW_STATIC
+        STB_IMAGE_IMPLEMENTATION)
+
     target_link_libraries(index PRIVATE freetype glfw3 glew32s opengl32 gdi32 winmm)
 
     add_custom_command(TARGET index POST_BUILD
@@ -73,6 +80,9 @@ else() # Windows debug
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_SOURCE_DIR}/fonts"
             "$<TARGET_FILE_DIR:index>/fonts"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/textures"
+            "$<TARGET_FILE_DIR:index>/textures"
     )
 
     # target_compile_definitions(index PRIVATE RLGL_SHOW_GL_DETAILS)

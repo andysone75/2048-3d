@@ -13,8 +13,14 @@
 #include "Game2048.h"
 #include "View2048.h"
 #include "RenderPasses.h"
-#include "TextRenderer.h"
 #include "SwipeDetector.h"
+#include "UI.h"
+
+//#define ENABLE_ONSCREEN_LOG
+//#define ENABLE_IMGUI
+
+#define CANVAS_W 576
+#define CANVAS_H 1024
 
 class Application {
 public:
@@ -30,11 +36,12 @@ public:
     void terminate();
     void keyCallback(int key, int action);
     void mouseCallback(int button, int action);
+    void restartGame();
 
 private:
     GLFWwindow* window;
-    int canvasW = 576;
-    int canvasH = 1024;
+    int canvasW = CANVAS_W;
+    int canvasH = CANVAS_H;
     float dpr = -1;
     float ssaoScale = 1.0f;
     float shadowScale = 1.0f;
@@ -76,5 +83,17 @@ private:
     Mesh fullscreenQuadMesh;
     Shader fullscreenQuadShader;
 
-    TextRenderer textRenderer;
+    UI ui;
+    TextId scoreText;
+    TextId bestScoreText;
+    ImageId restartButton;
+
+#ifdef ENABLE_ONSCREEN_LOG
+    TextId fpsText;
+    TextId dprText;
+    TextId resText;
+    TextId shadowText;
+    TextId gPositionText;
+    TextId lightingText;
+#endif
 };

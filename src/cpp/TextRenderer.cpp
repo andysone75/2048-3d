@@ -37,7 +37,7 @@ bool TextRenderer::initialize(int canvasW, int canvasH) {
     }
 
     FT_Face face;
-    if (FT_New_Face(ft, "fonts/arial.ttf", 0, &face))
+    if (FT_New_Face(ft, "fonts/FredokaOne-Regular.ttf", 0, &face))
     {
         std::cout << "ERROR::FREETYPE: Failed to load font" << std::endl;
         return false;
@@ -94,7 +94,7 @@ bool TextRenderer::initialize(int canvasW, int canvasH) {
     return true;
 }
 
-void TextRenderer::draw(std::string text, float x, float y, float scale, glm::vec3 color) {
+void TextRenderer::draw(std::string text, float x, float y, float scale, glm::vec3 color, float alignmentX) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -105,7 +105,16 @@ void TextRenderer::draw(std::string text, float x, float y, float scale, glm::ve
     glBindVertexArray(VAO);
 
     // iterate through all characters
+    float totalWidth = 0.0f;
     std::string::const_iterator c;
+
+    for (c = text.begin(); c != text.end(); c++) {
+        Character ch = characters[*c];
+        totalWidth += (ch.Advance >> 6) * scale;
+    }
+
+    x -= totalWidth * alignmentX;
+
     for (c = text.begin(); c != text.end(); c++)
     {
         Character ch = characters[*c];

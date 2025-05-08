@@ -226,6 +226,29 @@ GLuint compileShader(GLenum type, const char* src) {
     return shader;
 }
 
+Shader Shader::Load(const std::string& vsPath, const std::string& fsPath) {
+    GLuint vs = compileShader(GL_VERTEX_SHADER, loadShaderSource(vsPath).c_str());
+    GLuint fs = compileShader(GL_FRAGMENT_SHADER, loadShaderSource(fsPath).c_str());
+    GLuint id = glCreateProgram();
+
+    glAttachShader(id, vs);
+    glAttachShader(id, fs);
+    glLinkProgram(id);
+
+    GLint success;
+    glGetProgramiv(id, GL_LINK_STATUS, &success);
+    if (!success) {
+        char infoLog[512];
+        glGetProgramInfoLog(id, 512, nullptr, infoLog);
+        std::cerr << "Shader linking failed:\n" << infoLog << '\n';
+    }
+
+    glDeleteShader(vs);
+    glDeleteShader(fs);
+
+    return Shader{ id };
+}
+
 Shader Shader::Load(const std::string& vsPath, const std::string& fsPath, const std::vector<std::string>& attribNames) {
     GLuint vs = compileShader(GL_VERTEX_SHADER, loadShaderSource(vsPath).c_str());
     GLuint fs = compileShader(GL_FRAGMENT_SHADER, loadShaderSource(fsPath).c_str());

@@ -36,7 +36,8 @@ struct Mesh {
 struct Shader {
 	GLuint id;
 
-	static Shader Load(const std::string& vsPath, const std::string& fsPath, const std::vector<std::string>& attribNames);
+    static Shader Load(const std::string& vsPath, const std::string& fsPath);
+    static Shader Load(const std::string& vsPath, const std::string& fsPath, const std::vector<std::string>& attribNames);
 
 	inline void use() const { glUseProgram(id); }
 	
