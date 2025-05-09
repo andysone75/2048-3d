@@ -59,10 +59,7 @@ void Application::keyCallback(int key, int action) {
             else if (d) game.goDown();
             else game.goRight();
 
-            if (game.boardChanged()) {
-                game.addRandom();
-                view.updateBoard();
-            }
+            view.updateBoard();
         }
 
         if (key == GLFW_KEY_D) {
@@ -104,7 +101,11 @@ void Application::mouseCallback(int button, int action) {
 
 void Application::restartGame() {
     game.reset();
-    game.addRandom();
+    view.updateBoardFast();
+}
+
+void Application::undoMove() {
+    game.undoMove();
     view.updateBoardFast();
 }
 
@@ -220,9 +221,17 @@ bool Application::initialize() {
     restartButtonDesc.scale = .75f;
     restartButtonDesc.alignmentY = 1.0f;
     restartButtonDesc.position = glm::vec2(5, canvasH - 5);
-    restartButton = ui.createImage(restartButtonDesc, "textures/restart-icon.png");
+    ImageId restartButtonImage = ui.createImage(restartButtonDesc, "textures/restart-icon.png");
 
-    ui.createButton(restartButton, [this]() { restartGame(); });
+    ImageDescription undoButtonDesc;
+    undoButtonDesc.scale = .75f;
+    undoButtonDesc.alignmentY = 1.0f;
+    undoButtonDesc.alignmentX = 1.0f;
+    undoButtonDesc.position = glm::vec2(canvasW - 5, canvasH - 5);
+    ImageId undoButtonImage = ui.createImage(undoButtonDesc, "textures/restart-icon.png");
+
+    ui.createButton(restartButtonImage, [this]() { restartGame(); });
+    ui.createButton(undoButtonImage, [this]() { undoMove(); });
 
 #ifdef ENABLE_ONSCREEN_LOG
     int logCounter = 0;
@@ -276,14 +285,7 @@ void Application::initGame() {
     light.nearZ = .01f;
     light.farZ = 10.0f;
 
-    std::array<std::array<int, 4>, 4> start = { {
-        {0, 0, 0, 0},
-        {0, 0, 0, 0},
-        {0, 0, 0, 0},
-        {0, 0, 0, 0}
-    } };
-    game.setBoard(start);
-    game.addRandom();
+    game.reset();
     view.updateBoardFast();
 
     // Initialize Rendering
@@ -372,10 +374,7 @@ void Application::mainLoop() {
             else if (d) game.goDown();
             else game.goRight();
 
-            if (game.boardChanged()) {
-                game.addRandom();
-                view.updateBoard();
-            }
+            view.updateBoard();
         }
     }
 

@@ -51,7 +51,8 @@ void UI::mouseCallback(int button, int action, glm::vec2 position) {
 		max.x += image.width * image.scale;
 		max.y += image.height * image.scale;
 
-		glm::vec2 pos = position * image.scale;
+		//glm::vec2 pos = position * image.scale; // with this command button clicks don't work when alignmentX == 1, but without it buttons "triggers" have sizes as if no scaling applied
+		glm::vec2 pos = position;
 		pos.y = canvasH - pos.y;
 
 		if (min.x <= pos.x && max.x >= pos.x &&

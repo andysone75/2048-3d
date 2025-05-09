@@ -37,6 +37,7 @@ public:
     void keyCallback(int key, int action);
     void mouseCallback(int button, int action);
     void restartGame();
+    void undoMove();
 
 private:
     GLFWwindow* window;
@@ -86,7 +87,6 @@ private:
     UI ui;
     TextId scoreText;
     TextId bestScoreText;
-    ImageId restartButton;
 
 #ifdef ENABLE_ONSCREEN_LOG
     TextId fpsText;
