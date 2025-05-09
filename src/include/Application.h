@@ -7,6 +7,7 @@
 #endif
 
 #include <GLFW/glfw3.h>
+#include <memory>
 
 #include "Engine.h"
 #include "Scene.h"
@@ -15,6 +16,7 @@
 #include "RenderPasses.h"
 #include "SwipeDetector.h"
 #include "UI.h"
+#include "FileSaveStorage.h"
 
 //#define ENABLE_ONSCREEN_LOG
 //#define ENABLE_IMGUI
@@ -76,6 +78,8 @@ private:
     Game2048& game;
     View2048& view;
     SwipeDetector swipeDetector;
+    std::unique_ptr<SaveStorage> saveStorage = std::make_unique<FileSaveStorage>();
+    SaveData* saveData;
 
     RenderPassLighting lightingPass;
     RenderPassShadow shadowPass;

@@ -58,8 +58,12 @@ void Application::keyCallback(int key, int action) {
             else if (r) game.goLeft();
             else if (d) game.goDown();
             else game.goRight();
+                
+            if (game.getScore() > saveData->bestScore)
+                saveData->bestScore = game.getScore();
 
             view.updateBoard();
+            saveStorage->save(*saveData);
         }
 
         if (key == GLFW_KEY_D) {
@@ -102,11 +106,13 @@ void Application::mouseCallback(int button, int action) {
 void Application::restartGame() {
     game.reset();
     view.updateBoardFast();
+    saveStorage->save(*saveData);
 }
 
 void Application::undoMove() {
     game.undoMove();
     view.updateBoardFast();
+    saveStorage->save(*saveData);
 }
 
 void keyCallbackWrapper(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -203,6 +209,8 @@ bool Application::initialize() {
     shadingPower = POWER_SHADING;
     shadowPower = POWER_SHADOW;
     ssaoPower = POWER_OCCLUSION;
+
+    saveStorage->load();
 
     float uiScale = dpr > 1.01f ? dpr * .75f : 1.0f; // Scale 1.0 looks good on dpr == 1, but too large on dpr == 3
     ui.initialize(canvasW, canvasH, uiScale);
@@ -325,11 +333,18 @@ void Application::mainLoop() {
     int fps = static_cast<int>(1.0f / dt);
 
     // Game logic
+    if (saveStorage->checkLoaded()) {
+        game.setHistory(saveStorage->getHistoryTree(), saveStorage->getHistoryPointer());
+        saveData = new SaveData(saveStorage->getBestScore(), game.getHistoryPointer(), game.getHistoryTree());
+        saveStorage->unload();
+        view.updateBoardFast();
+    }
+
     cameraAngle = Utils::lerp(cameraAngle, cameraStartAngle + cameraAngleOffset, dt * 15.0f);
     camera.position = cameraOffset + getCameraPos(cameraAngle, cameraRadius, cameraHeight);
     view.update(dt);
     ui.getText(scoreText).value = std::to_string(game.getScore());
-    ui.getText(bestScoreText).value = std::to_string(game.getScore());
+    ui.getText(bestScoreText).value = std::to_string(saveData->bestScore);
     
 #ifdef ENABLE_ONSCREEN_LOG
     ui.getText(fpsText).value = "fps: " + std::to_string(fps);
@@ -374,7 +389,11 @@ void Application::mainLoop() {
             else if (d) game.goDown();
             else game.goRight();
 
+            if (game.getScore() > saveData->bestScore)
+                saveData->bestScore = game.getScore();
+
             view.updateBoard();
+            saveStorage->save(*saveData);
         }
     }
 
@@ -437,5 +456,6 @@ void Application::mainLoop() {
 }
 
 void Application::terminate() {
+    saveStorage.reset();
     glfwTerminate();
 }

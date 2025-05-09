@@ -23,6 +23,25 @@ struct HistoryTreeNode {
 enum class MoveDirection { Up, Right, Down, Left };
 
 class Game2048 {
+public:
+    Game2048(int maxLevel);
+
+    void reset();
+    void goLeft();
+    void goRight();
+    void goUp();
+    void goDown();
+    void undoMove();
+    void setHistory(const std::vector<HistoryTreeNode>& historyTree, int historyPointer);
+
+    const std::array<std::array<int, 4>, 4>& getBoard() const;
+    const std::array<std::array<int, 4>, 4>& getPreviousBoard() const;
+    const std::vector<TileMove>& getLastMoves() const;
+    const std::vector<HistoryTreeNode>& getHistoryTree() const;
+    const int& getHistoryPointer() const;
+
+    int getScore() const;
+
 private:
     int maxLevel;
     int score = 0;
@@ -43,20 +62,5 @@ private:
     void add(int posX, int posY);
     bool boardChanged() const;
     void onGoComplete(MoveDirection moveDirection, int& spawnX, int& spawnY);
-
-public:
-    Game2048(int maxLevel);
-    
-    void reset();
-    void goLeft();
-    void goRight();
-    void goUp();
-    void goDown();
-    void undoMove();
-
-    const std::array<std::array<int, 4>, 4>& getBoard() const;
-    const std::array<std::array<int, 4>, 4>& getPreviousBoard() const;
-    const std::vector<TileMove>& getLastMoves() const;
-    
-    int getScore() const;
+    void rebuildBoard();
 };

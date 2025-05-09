@@ -244,15 +244,18 @@ void Game2048::add(int posX, int posY) {
 }
 
 void Game2048::undoMove() {
-    if (historyPointer == 0)
+    if (historyTree[historyPointer].indexParent == -1)
         return;
 
+    historyPointer = historyTree[historyPointer].indexParent;
+    rebuildBoard();
+}
+
+void Game2048::rebuildBoard() {
     score = 0;
     boardBeforeMove = {};
     lastMoves.clear();
     board = {};
-
-    historyPointer = historyTree[historyPointer].indexParent;
 
     int currentNode = historyPointer;
     std::vector<int> path;
@@ -277,22 +280,18 @@ void Game2048::undoMove() {
     }
 }
 
-const std::vector<TileMove>& Game2048::getLastMoves() const {
-    return lastMoves;
+void Game2048::setHistory(const std::vector<HistoryTreeNode>& historyTree, int historyPointer) {
+    if (historyTree.size() > 0) {
+        this->historyTree = historyTree;
+        this->historyPointer = historyPointer;
+        rebuildBoard();
+    }
 }
 
-const std::array<std::array<int, 4>, 4>& Game2048::getPreviousBoard() const {
-    return boardBeforeMove;
-}
-
-bool Game2048::boardChanged() const {
-    return board != boardBeforeMove;
-}
-
-int Game2048::getScore() const {
-    return score;
-}
-
-const std::array<std::array<int, 4>, 4>& Game2048::getBoard() const {
-    return board;
-}
+const std::vector<TileMove>& Game2048::getLastMoves() const { return lastMoves; }
+const std::array<std::array<int, 4>, 4>& Game2048::getPreviousBoard() const { return boardBeforeMove; }
+bool Game2048::boardChanged() const { return board != boardBeforeMove; }
+int Game2048::getScore() const { return score; }
+const std::array<std::array<int, 4>, 4>& Game2048::getBoard() const { return board; }
+const std::vector<HistoryTreeNode>& Game2048::getHistoryTree() const { return historyTree; }
+const int& Game2048::getHistoryPointer() const { return historyPointer; }
