@@ -17,6 +17,7 @@
 #include "SwipeDetector.h"
 #include "UI.h"
 #include "FileSaveStorage.h"
+#include "YandexSaveStorage.h"
 
 //#define ENABLE_ONSCREEN_LOG
 //#define ENABLE_IMGUI
@@ -39,7 +40,6 @@ public:
     void keyCallback(int key, int action);
     void mouseCallback(int button, int action);
     void restartGame();
-    void undoMove();
 
 private:
     GLFWwindow* window;
@@ -50,7 +50,8 @@ private:
     float shadowScale = 1.0f;
     float lightScale = 1.0f;
 
-    float lastTime;
+    float time = 0.0f;
+    float lastTime = 0.0f;
     float cameraAngleOffset = 0.0f;
     float cameraStartAngle = 25.0f;
     float cameraAngle;
@@ -78,7 +79,12 @@ private:
     Game2048& game;
     View2048& view;
     SwipeDetector swipeDetector;
-    std::unique_ptr<SaveStorage> saveStorage = std::make_unique<FileSaveStorage>();
+    std::unique_ptr<SaveStorage> saveStorage = 
+#ifndef __EMSCRIPTEN__
+        std::make_unique<FileSaveStorage>();
+#else
+        std::make_unique<YandexSaveStorage>();
+#endif
     SaveData* saveData;
 
     RenderPassLighting lightingPass;
@@ -90,7 +96,9 @@ private:
 
     UI ui;
     TextId scoreText;
+    TextId priceText;
     TextId bestScoreText;
+    ButtonId noAdsButton;
 
 #ifdef ENABLE_ONSCREEN_LOG
     TextId fpsText;
@@ -100,4 +108,14 @@ private:
     TextId gPositionText;
     TextId lightingText;
 #endif
+
+    bool firstAdFlag = false;
+    bool purchasesUpdateStartFlag = false;
+    bool purchasesUpdated = false;
+    float lastInterTime = 0.0f;
+
+    void go(MoveDirection direction);
+    void undoMove();
+    void onUndoButtonClicked();
+    bool tryShowInter();
 };

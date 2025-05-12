@@ -27,10 +27,10 @@ public:
     Game2048(int maxLevel);
 
     void reset();
-    void goLeft();
-    void goRight();
-    void goUp();
-    void goDown();
+    bool goLeft();
+    bool goRight();
+    bool goUp();
+    bool goDown();
     void undoMove();
     void setHistory(const std::vector<HistoryTreeNode>& historyTree, int historyPointer);
 

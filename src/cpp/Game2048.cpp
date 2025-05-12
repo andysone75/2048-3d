@@ -30,18 +30,21 @@ void Game2048::reset() {
     node.spawnY = spawnY;
 }
 
-void Game2048::goLeft() {
+bool Game2048::goLeft() {
     boardBeforeMove = board;
     moveLeft();
-    
+
     if (boardChanged()) {
         int spawnX, spawnY;
         onGoComplete(MoveDirection::Left, spawnX, spawnY);
         add(spawnX, spawnY);
+        return true;
     }
+
+    return false;
 }
 
-void Game2048::goRight() {
+bool Game2048::goRight() {
     boardBeforeMove = board;
     moveRight();
 
@@ -49,27 +52,38 @@ void Game2048::goRight() {
         int spawnX, spawnY;
         onGoComplete(MoveDirection::Right, spawnX, spawnY);
         add(spawnX, spawnY);
+        return true;
     }
+
+    return false;
 }
 
-void Game2048::goUp() {
+bool Game2048::goUp() {
     boardBeforeMove = board;
     moveUp();
+
     if (boardChanged()) {
         int spawnX, spawnY;
         onGoComplete(MoveDirection::Up, spawnX, spawnY);
         add(spawnX, spawnY);
+        return true;
     }
+
+    return false;
 }
 
-void Game2048::goDown() {
+bool Game2048::goDown() {
     boardBeforeMove = board;
     moveDown();
+
     if (boardChanged()) {
         int spawnX, spawnY;
         onGoComplete(MoveDirection::Down, spawnX, spawnY);
         add(spawnX, spawnY);
+        return true;
     }
+
+    return false;
 }
 
 void Game2048::onGoComplete(MoveDirection moveDirection, int& spawnX, int& spawnY) {

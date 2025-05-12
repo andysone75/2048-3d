@@ -2,7 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Raylib App</title>
+
+    <!--<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>-->
+
+    <!-- Yandex Games SDK -->
+    <script src="/sdk.js"></script>
+
     <style>
         html, body {
             margin: 0;
@@ -34,8 +42,6 @@
             }
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-    <script>eruda.init();</script>
 </head>
 <body>
 
@@ -58,6 +64,159 @@
 
         canvas.width = width;
         canvas.height = height;
+
+        var ysdk;
+        var lb;
+        var player;
+        var save;
+        var payments;
+        var gameShop;
+
+        var initFlag;
+        var dataLoadedFlag;
+        var purchasesLoadedFlag;
+
+        var rewardedAdCompleteFlag;
+        var rewardedAdCloseFlag;
+        var purchaseCompleteFlag;
+        var purchaseErrorFlag;
+        var purchaseUpdateLockFlag;
+        var purchasesUpdateFlag;
+
+        YaGames
+            .init()
+            .then(_ysdk => {
+                ysdk = _ysdk;
+                _ysdk.getLeaderboards().then(_lb => lb = _lb);
+                _ysdk.getPlayer({ scopes: true }).then(_player => {
+                    player = _player;
+                    player.getData(['save']).then(_save => {
+                        save = _save['save'];
+                        dataLoadedFlag = true;
+                    });
+                });
+                _ysdk.getPayments().then(_payments => {
+                    payments = _payments;
+                    payments.getCatalog().then(products => {
+                        gameShop = products;
+                        purchasesLoadedFlag = true;
+                    });
+                });
+                initFlag = true;
+            });
+
+        function yandexInitialized() { return initFlag && dataLoadedFlag && purchasesLoadedFlag; }
+        function getRewardedAdCompleteFlag() { return rewardedAdCompleteFlag; }
+        function getRewardedAdCloseFlag() { return rewardedAdCloseFlag; }
+        function getPurchaseCompleteFlag() { return purchaseCompleteFlag; }
+        function getPurchaseErrorFlag() { return purchaseErrorFlag; }
+        function getPurchasesUpdateFlag() { return purchasesUpdateFlag; }
+
+        function resetFlagsRewardedAd() {
+            rewardedAdCompleteFlag = false;
+            rewardedAdCloseFlag = false;
+        }
+
+        function resetPurchasesUpdateFlag() {
+            purchasesUpdateFlag = false;
+        }
+
+        function resetPurchaseCompleteFlag() {
+            purchaseCompleteFlag = false;
+        }
+
+        function getPlayerData() {
+            if (!dataLoadedFlag) return "";
+            if (save == null) return "{}";
+            return save.data;
+        }
+
+        function saveGameData(dataStr) {
+            if (player == null) return;
+            var data = {
+                "save": {
+                    "data" : dataStr
+                }
+            };
+            player.setData(data);
+        }
+
+        function showFullscreenAdv() {
+            ysdk.adv.showFullscreenAdv({
+                callbacks: {
+                    onClose: function (wasShown) {},
+                    onError: function (error) {},
+                    onOpen: function () {}
+                }
+            });
+        }
+
+        function showRewardedVideo() {
+            ysdk.adv.showRewardedVideo({
+                callbacks: {
+                    onRewarded: () => { rewardedAdCompleteFlag = true; },
+                    onClose: () => { rewardedAdCloseFlag = true; },
+                    onError: (e) => { rewardedAdCloseFlag = true; }
+                }
+            });
+        }
+
+        function setLeaderboardScore(score) {
+            if (lb) {
+                lb.setLeaderboardScore('leaderboard', score);
+            }
+        }
+
+        function gameReadyApi_ready() {
+            if (ysdk == null) return;
+            ysdk.features.LoadingAPI?.ready();
+        }
+
+        function purchase(productId) {
+            if (payments == null) return;
+            purchaseCompleteFlag = false;
+            purchaseErrorFlag = false;
+            payments.purchase({ id: productId })
+                .then(purchase => { purchaseCompleteFlag = true; })
+                .catch(err => { purchaseErrorFlag = true; });
+        }
+
+        function updatePurchases() {
+            if (payments == null) {
+                purchases = [];
+                return;
+            }
+
+            if (purchaseUpdateLockFlag) return;
+            purchaseUpdateLockFlag = true;
+
+            payments.getPurchases()
+                .then(_purchases => {
+                    purchases = _purchases.map(p => p.productID);
+                    purchasesUpdateFlag = true;
+                    purchaseUpdateLockFlag = false;
+                })
+                .catch(err => {
+                    purchases = [];
+                    purchasesUpdateFlag = true;
+                    purchaseUpdateLockFlag = false;
+                });
+        }
+
+        function hasPurchase(id) { return purchases.indexOf(id) !== -1; }
+
+        function getProductPrice(productId) {
+            if (gameShop == null) return "";
+            var product = gameShop.find(p => p.id === productId);
+            return product ? product.price : "";
+        }
+
+        function toCString(str) {
+            var lengthBytes = lengthBytesUTF8(str) + 1;
+            var stringOnHeap = _malloc(lengthBytes);
+            stringToUTF8(str, stringOnHeap, lengthBytes);
+            return stringOnHeap;
+        }
     </script>
 
     {{{ SCRIPT }}}

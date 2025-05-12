@@ -3,7 +3,7 @@
 
 #define FILENAME "save.txt"
 
-void FileSaveStorage::load() {
+bool FileSaveStorage::tryLoadData() {
 	bestScore = std::make_unique<int>();
 	historyPointer = std::make_unique<int>();
 	historyTree = std::make_unique<std::vector<HistoryTreeNode>>();
@@ -26,10 +26,13 @@ void FileSaveStorage::load() {
 			>> node.indexChildLeft;
 	}
 
-	setLoadFlag();
+	setLoadCompleteFlag();
+	return true;
 }
 
 void FileSaveStorage::save(const SaveData& data) {
+	if (!isLoadComplete()) return;
+
 	std::ofstream out(FILENAME);
 	out << data.bestScore << '\n';
 	out << data.historyPointer << '\n';

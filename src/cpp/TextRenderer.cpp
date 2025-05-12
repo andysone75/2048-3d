@@ -6,11 +6,45 @@
 #include <GL/glew.h>
 #endif
 
-#include <ft2build.h>
-#include FT_FREETYPE_H
-
 #include <iostream>
 #include <glm/gtc/type_ptr.hpp>
+#include <vector>
+#include <cstdint>
+
+#define FONT_PATH "fonts/Nunito-Black.ttf"
+
+std::u32string utf8_to_utf32(const std::string& utf8) {
+    std::u32string utf32;
+    size_t i = 0;
+    while (i < utf8.size()) {
+        uint8_t c = utf8[i++];
+        char32_t codepoint = 0;
+
+        if ((c & 0x80) == 0x00) {  // 1-byte character (ASCII)
+            codepoint = c;
+        }
+        else if ((c & 0xE0) == 0xC0) {  // 2-byte character
+            codepoint = (c & 0x1F) << 6;
+            codepoint |= (utf8[i++] & 0x3F);
+        }
+        else if ((c & 0xF0) == 0xE0) {  // 3-byte character
+            codepoint = (c & 0x0F) << 12;
+            codepoint |= (utf8[i++] & 0x3F) << 6;
+            codepoint |= (utf8[i++] & 0x3F);
+        }
+        else if ((c & 0xF8) == 0xF0) {  // 4-byte character
+            codepoint = (c & 0x07) << 18;
+            codepoint |= (utf8[i++] & 0x3F) << 12;
+            codepoint |= (utf8[i++] & 0x3F) << 6;
+            codepoint |= (utf8[i++] & 0x3F);
+        }
+        else {
+            throw std::runtime_error("Invalid UTF-8");
+        }
+        utf32.push_back(codepoint);
+    }
+    return utf32;
+}
 
 bool TextRenderer::initialize(int canvasW, int canvasH) {
     shader = Shader::Load("shaders/text-vs.glsl", "shaders/text-fs.glsl", {});
@@ -30,15 +64,13 @@ bool TextRenderer::initialize(int canvasW, int canvasH) {
     glBindVertexArray(0);
 
     FT_Library ft;
-    if (FT_Init_FreeType(&ft))
-    {
+    if (FT_Init_FreeType(&ft)) {
         std::cout << "ERROR::FREETYPE: Could not init FreeType Library" << std::endl;
         return false;
     }
 
     FT_Face face;
-    if (FT_New_Face(ft, "fonts/FredokaOne-Regular.ttf", 0, &face))
-    {
+    if (FT_New_Face(ft, FONT_PATH, 0, &face)) {
         std::cout << "ERROR::FREETYPE: Failed to load font" << std::endl;
         return false;
     }
@@ -50,42 +82,23 @@ bool TextRenderer::initialize(int canvasW, int canvasH) {
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // disable byte-alignment restriction
 
-    for (unsigned char c = 0; c < 128; c++)
-    {
-        // load character glyph 
-        if (FT_Load_Char(face, c, FT_LOAD_RENDER))
-        {
+    // load ASCII (0-127)
+    for (char32_t c = 0; c < 128; c++) {
+        if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
             std::cout << "ERROR::FREETYTPE: Failed to load Glyph" << std::endl;
             continue;
         }
-        // generate texture
-        unsigned int texture;
-        glGenTextures(1, &texture);
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            GL_LUMINANCE,
-            face->glyph->bitmap.width,
-            face->glyph->bitmap.rows,
-            0,
-            GL_LUMINANCE,
-            GL_UNSIGNED_BYTE,
-            face->glyph->bitmap.buffer
-        );
-        // set texture options
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        // now store character for later use
-        Character character = {
-            texture,
-            glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
-            glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
-            static_cast<unsigned int>(face->glyph->advance.x)
-        };
-        characters.insert(std::pair<char, Character>(c, character));
+
+        generateGlyphTexture(face, c);
+    }
+
+    // load Cyrillic (U+0400 - U+04FF)
+    for (char32_t c = 0x0400; c < 0x04FF; c++) {
+        if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
+            std::cout << "ERROR::FREETYTPE: Failed to load Glyph" << std::endl;
+            continue;
+        }
+        generateGlyphTexture(face, c);
     }
 
     FT_Done_Face(face);
@@ -106,18 +119,24 @@ void TextRenderer::draw(std::string text, float x, float y, float scale, glm::ve
 
     // iterate through all characters
     float totalWidth = 0.0f;
-    std::string::const_iterator c;
+    //std::string::const_iterator c;
+    std::u32string utf32 = utf8_to_utf32(text);
 
-    for (c = text.begin(); c != text.end(); c++) {
-        Character ch = characters[*c];
+    for (char32_t c : utf32) {
+        if (characters.find(c) == characters.end())
+            continue;
+
+        Character ch = characters.at(c);
         totalWidth += (ch.Advance >> 6) * scale;
     }
 
     x -= totalWidth * alignmentX;
 
-    for (c = text.begin(); c != text.end(); c++)
-    {
-        Character ch = characters[*c];
+    for (char32_t c : utf32) {
+        if (characters.find(c) == characters.end())
+            continue;
+
+        Character ch = characters.at(c);
 
         float xpos = x + ch.Bearing.x * scale;
         float ypos = y - (ch.Size.y - ch.Bearing.y) * scale;
@@ -154,4 +173,35 @@ void TextRenderer::draw(std::string text, float x, float y, float scale, glm::ve
     glBindTexture(GL_TEXTURE_2D, 0);
 
     glDisable(GL_BLEND);
+}
+
+void TextRenderer::generateGlyphTexture(FT_Face face, char32_t codepoint) {
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_LUMINANCE,
+        face->glyph->bitmap.width,
+        face->glyph->bitmap.rows,
+        0,
+        GL_LUMINANCE,
+        GL_UNSIGNED_BYTE,
+        face->glyph->bitmap.buffer
+    );
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    Character character = {
+        texture,
+        glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
+        glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
+        static_cast<unsigned int>(face->glyph->advance.x)
+    };
+
+    characters.insert({ codepoint, character });
 }

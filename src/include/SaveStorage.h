@@ -21,9 +21,10 @@ struct SaveData {
 class SaveStorage {
 public:
 	virtual ~SaveStorage() = default;
-	virtual void load() = 0;
+	virtual bool tryLoadData() = 0;
 	virtual void save(const SaveData& data) = 0;
 
+	void load();
 	void unload();
 	bool checkLoaded();
 
@@ -35,8 +36,11 @@ protected:
 	std::unique_ptr<int> bestScore;
 	std::unique_ptr<int> historyPointer;
 	std::unique_ptr<std::vector<HistoryTreeNode>> historyTree;
-	void setLoadFlag();
+
+	inline bool isLoadComplete() const { return loadComplete; }
+	inline void setLoadCompleteFlag() { loadComplete = true; }
 
 private:
 	bool loadFlag = false;
+	bool loadComplete = false;
 };

@@ -4,6 +4,9 @@
 #include <string>
 #include <map>
 
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
 struct Character {
     unsigned int TextureID;  // ID handle of the glyph texture
     glm::ivec2   Size;       // Size of glyph
@@ -19,5 +22,7 @@ public:
 private:
     Shader shader;
     unsigned int VAO, VBO;
-    std::map<char, Character> characters;
+    std::map<char32_t, Character> characters;
+
+    void generateGlyphTexture(FT_Face face, char32_t codepoint);
 };

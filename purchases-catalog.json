@@ -1,0 +1,10 @@
+[
+  {
+    "id": "no_ads",
+    "title": "Ads disabling",
+    "description": "Disable all ads",
+    "price": "0.99 USD",
+    "priceValue": "0.99",
+    "priceCurrencyCode": "USD"
+  }
+]

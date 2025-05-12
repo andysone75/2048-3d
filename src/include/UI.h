@@ -17,6 +17,7 @@ struct DrawableDescription {
 };
 
 struct Drawable {
+	bool active = true;
 	glm::vec2 position;
 	glm::vec3 color;
 	float scale;
@@ -61,9 +62,12 @@ struct Image : public Drawable {
 };
 
 // Button
+using ButtonId = int;
+
 struct Button {
 	ImageId image;
 	std::function<void()> clickCallback;
+
 	Button(ImageId _image, std::function<void()> _clickCallback) : image(_image), clickCallback(_clickCallback) {}
 };
 
@@ -72,11 +76,14 @@ public:
 	void initialize(int canvasW, int canvasH, float dpr);
 	void render();
 	void mouseCallback(int button, int action, glm::vec2 position);
+
 	TextId createText(const TextDescription& desc);
-	Text& getText(TextId id);
 	ImageId createImage(const ImageDescription& desc, const char* filepath);
-	Image& getImage(ImageId id);
-	void createButton(ImageId image, std::function<void()> clickCallback);
+	ButtonId createButton(ImageId image, std::function<void()> clickCallback);
+
+	inline Text& getText(TextId id) { return texts[id]; }
+	inline Image& getImage(ImageId id) { return images[id]; }
+	inline Button& getButton(ButtonId id) { return buttons[id]; }
 
 private:
 	float dpr;

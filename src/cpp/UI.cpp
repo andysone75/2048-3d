@@ -14,26 +14,30 @@ void UI::initialize(int canvasW, int canvasH, float dpr) {
 }
 
 void UI::render() {
-	for (const Text& text : texts)
+	for (const Text& text : texts) {
+		if (!text.active) continue;
 		textRenderer.draw(
-			text.value, 
-			text.position.x, 
+			text.value,
+			text.position.x,
 			text.position.y,
 			text.scale * dpr,
-			text.color, 
+			text.color,
 			text.alignmentX);
+	}
 
-	for (const Image& image : images)
+	for (const Image& image : images) {
+		if (!image.active) continue;
 		imageRenderer.draw(
-			image.texture, 
-			image.width, 
-			image.height, 
+			image.texture,
+			image.width,
+			image.height,
 			image.position.x,
 			image.position.y,
 			image.scale * dpr,
-			image.color, 
+			image.color,
 			image.alignmentX,
 			image.alignmentY);
+	}
 }
 
 void UI::mouseCallback(int button, int action, glm::vec2 position) {
@@ -41,6 +45,8 @@ void UI::mouseCallback(int button, int action, glm::vec2 position) {
 		return;
 
 	for (const Button& button : buttons) {
+		if (!getImage(button.image).active) continue;
+
 		const Image& image = getImage(button.image);
 		
 		glm::vec2 min = image.position;
@@ -66,10 +72,6 @@ void UI::mouseCallback(int button, int action, glm::vec2 position) {
 TextId UI::createText(const TextDescription& desc) {
 	texts.emplace_back(desc);
 	return texts.size() - 1;
-}
-
-Text& UI::getText(TextId id) {
-	return texts[id];
 }
 
 ImageId UI::createImage(const ImageDescription& desc, const char* filepath) {
@@ -105,10 +107,7 @@ ImageId UI::createImage(const ImageDescription& desc, const char* filepath) {
 	return index;
 }
 
-Image& UI::getImage(ImageId id) {
-	return images[id];
-}
-
-void UI::createButton(ImageId image, std::function<void()> clickCallback) {
+ButtonId UI::createButton(ImageId image, std::function<void()> clickCallback) {
 	buttons.emplace_back(image, clickCallback);
+	return buttons.size() - 1;
 }

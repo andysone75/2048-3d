@@ -18,17 +18,21 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
 #include "Utils.h"
+#include "JS.h"
 
 #define SCALE_RES(res, scale) static_cast<int>((float)res * scale);
 
 #define RES_SHADOWMAP 1024
 #define RES_SSAO      1024
+#define INTER_COOLDOWN 1.5f * 60.0f
+#define NO_ADS_ID "no_ads"
 
 #ifdef __EMSCRIPTEN__
 #define POWER_SHADING   0.3f;
 #define POWER_SHADOW    0.2f;
-#define POWER_OCCLUSION 1.9f;
+#define POWER_OCCLUSION 1.5f;
 #else
 #define POWER_SHADING   0.15f;
 #define POWER_SHADOW    0.2f;
@@ -36,7 +40,7 @@
 #endif
 
 #ifdef __EMSCRIPTEN__
-#define SSAO_RADIUS 0.04f;
+#define SSAO_RADIUS 0.045f;
 #else
 #define SSAO_RADIUS 0.06f;
 #endif
@@ -46,24 +50,74 @@ inline glm::vec3 getCameraPos(float angle, float radius, float height) {
     return { cos(glm::radians(angle)) * radius, height, sin(glm::radians(angle)) * radius };
 }
 
+void Application::onUndoButtonClicked() {
+    if (purchasesUpdated && !js::hasPurchase(NO_ADS_ID)) {
+        js::showRewardedVideo();
+    }
+    else {
+        undoMove();
+    }
+}
+
+void Application::undoMove() {
+    game.undoMove();
+    view.updateBoardFast();
+    saveStorage->save(*saveData);
+}
+
+void buyNoAds() {
+    js::purchase(NO_ADS_ID);
+}
+
+void Application::go(MoveDirection direction) {
+    bool boardChanged = false;
+    switch (direction) {
+        case MoveDirection::Left: boardChanged = game.goLeft(); break;
+        case MoveDirection::Up: boardChanged = game.goUp(); break;
+        case MoveDirection::Right: boardChanged = game.goRight(); break;
+        case MoveDirection::Down: boardChanged = game.goDown(); break;
+    }
+
+    if (!boardChanged)
+        return;
+
+    if (game.getScore() > saveData->bestScore) {
+        saveData->bestScore = game.getScore();
+        js::setLeaderboardScore(saveData->bestScore);
+    }
+
+    view.updateBoard();
+    saveStorage->save(*saveData);
+
+    if (firstAdFlag && time >= lastInterTime + INTER_COOLDOWN) {
+        if (tryShowInter())
+            lastInterTime = time;
+    }
+}
+
+bool Application::tryShowInter() {
+    bool showed = false;
+    if (js::getPurchasesUpdateFlag() && !js::hasPurchase(NO_ADS_ID)) {
+        js::showFullscreenAdv();
+        showed = true;
+    }
+    return showed;
+}
+
 void Application::keyCallback(int key, int action) {
     if (action == GLFW_PRESS) {
         bool u = moveInputs[0] == key;
-        bool r = moveInputs[1] == key;
+        bool l = moveInputs[1] == key;
         bool d = moveInputs[2] == key;
-        bool l = moveInputs[3] == key;
+        bool r = moveInputs[3] == key;
 
         if (u || r || d || l) {
-            if (u) game.goUp();
-            else if (r) game.goLeft();
-            else if (d) game.goDown();
-            else game.goRight();
-                
-            if (game.getScore() > saveData->bestScore)
-                saveData->bestScore = game.getScore();
-
-            view.updateBoard();
-            saveStorage->save(*saveData);
+            MoveDirection direction =
+                u ? MoveDirection::Up :
+                r ? MoveDirection::Right :
+                d ? MoveDirection::Down :
+                MoveDirection::Left;
+            go(direction);
         }
 
         if (key == GLFW_KEY_D) {
@@ -105,12 +159,6 @@ void Application::mouseCallback(int button, int action) {
 
 void Application::restartGame() {
     game.reset();
-    view.updateBoardFast();
-    saveStorage->save(*saveData);
-}
-
-void Application::undoMove() {
-    game.undoMove();
     view.updateBoardFast();
     saveStorage->save(*saveData);
 }
@@ -233,13 +281,31 @@ bool Application::initialize() {
 
     ImageDescription undoButtonDesc;
     undoButtonDesc.scale = .75f;
-    undoButtonDesc.alignmentY = 1.0f;
     undoButtonDesc.alignmentX = 1.0f;
+    undoButtonDesc.alignmentY = 1.0f;
     undoButtonDesc.position = glm::vec2(canvasW - 5, canvasH - 5);
     ImageId undoButtonImage = ui.createImage(undoButtonDesc, "textures/restart-icon.png");
 
+    ImageDescription noAdsButtonDesc;
+    noAdsButtonDesc.scale = .3f;
+    noAdsButtonDesc.alignmentX = 1.0f;
+    noAdsButtonDesc.alignmentY = 1.0f;
+    noAdsButtonDesc.position = glm::vec2(canvasW - 15, canvasH - 100);
+    ImageId noAdsButtonImage = ui.createImage(noAdsButtonDesc, "textures/no-ads-icon.png");
+
+    TextDescription priceLabelDesc;
+    Image noAdsImage = ui.getImage(noAdsButtonImage);
+    priceLabelDesc.position = glm::vec2(
+        canvasW - 15 - noAdsImage.width * noAdsImage.scale / 2, 
+        canvasH - 100 - noAdsImage.height * noAdsImage.scale - 20);
+    priceLabelDesc.alignmentX = 0.5f;
+    priceLabelDesc.alignmentY = 1.0f;
+    priceLabelDesc.scale = 0.5f;
+    priceText = ui.createText(priceLabelDesc);
+
     ui.createButton(restartButtonImage, [this]() { restartGame(); });
-    ui.createButton(undoButtonImage, [this]() { undoMove(); });
+    ui.createButton(undoButtonImage, [this]() { onUndoButtonClicked(); });
+    noAdsButton = ui.createButton(noAdsButtonImage, [this]() { buyNoAds(); });
 
 #ifdef ENABLE_ONSCREEN_LOG
     int logCounter = 0;
@@ -326,8 +392,7 @@ bool Application::isRunning() {
 }
 
 void Application::mainLoop() {
-    float time = static_cast<float>(glfwGetTime());
-    static float lastTime = time;
+    time = static_cast<float>(glfwGetTime());
     float dt = time - lastTime;
     lastTime = time;
     int fps = static_cast<int>(1.0f / dt);
@@ -338,6 +403,38 @@ void Application::mainLoop() {
         saveData = new SaveData(saveStorage->getBestScore(), game.getHistoryPointer(), game.getHistoryTree());
         saveStorage->unload();
         view.updateBoardFast();
+    }
+
+    if (!purchasesUpdateStartFlag && js::yandexInitialized()) {
+        js::updatePurchases();
+        js::gameReadyApi_ready();
+        purchasesUpdateStartFlag = true;
+        purchasesUpdated = false;
+    }
+
+    if (!purchasesUpdated && js::getPurchasesUpdateFlag()) {
+        bool noAdsPurchased = js::hasPurchase(NO_ADS_ID);
+        ui.getImage(ui.getButton(noAdsButton).image).active = !noAdsPurchased;
+        ui.getText(priceText).active = !noAdsPurchased;
+        ui.getText(priceText).value = js::getProductPrice(NO_ADS_ID);
+        purchasesUpdated = true;
+    }
+
+    if (js::getPurchaseCompleteFlag()) {
+        js::resetPurchaseCompleteFlag();
+        js::resetPurchasesUpdateFlag();
+        js::updatePurchases();
+        purchasesUpdated = false;
+    }
+
+    if (!firstAdFlag)
+        firstAdFlag = tryShowInter();
+
+    if (js::getRewardedAdCloseFlag()) {
+        if (js::getRewardedAdCompleteFlag()) {
+            undoMove();
+        }
+        js::resetFlagsRewardedAd();
     }
 
     cameraAngle = Utils::lerp(cameraAngle, cameraStartAngle + cameraAngleOffset, dt * 15.0f);
@@ -384,16 +481,14 @@ void Application::mainLoop() {
             bool d = indexMax == 2;
             bool l = indexMax == 3;
 
-            if (u) game.goUp();
-            else if (r) game.goLeft();
-            else if (d) game.goDown();
-            else game.goRight();
-
-            if (game.getScore() > saveData->bestScore)
-                saveData->bestScore = game.getScore();
-
-            view.updateBoard();
-            saveStorage->save(*saveData);
+            if (u || r || d || l) {
+                MoveDirection direction =
+                    u ? MoveDirection::Up :
+                    l ? MoveDirection::Right :
+                    d ? MoveDirection::Down :
+                    MoveDirection::Left;
+                go(direction);
+            }
         }
     }
 
