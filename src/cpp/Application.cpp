@@ -50,6 +50,10 @@ inline glm::vec3 getCameraPos(float angle, float radius, float height) {
     return { cos(glm::radians(angle)) * radius, height, sin(glm::radians(angle)) * radius };
 }
 
+void buyNoAds() {
+    js::purchase(NO_ADS_ID);
+}
+
 void Application::onUndoButtonClicked() {
     if (purchasesUpdated && !js::hasPurchase(NO_ADS_ID)) {
         js::showRewardedVideo();
@@ -65,10 +69,6 @@ void Application::undoMove() {
     saveStorage->save(*saveData);
 }
 
-void buyNoAds() {
-    js::purchase(NO_ADS_ID);
-}
-
 void Application::go(MoveDirection direction) {
     bool boardChanged = false;
     switch (direction) {
@@ -78,21 +78,36 @@ void Application::go(MoveDirection direction) {
         case MoveDirection::Down: boardChanged = game.goDown(); break;
     }
 
-    if (!boardChanged)
+    if (!boardChanged) {
+        audio.playStuck();
         return;
+    }
 
     if (game.getScore() > saveData->bestScore) {
         saveData->bestScore = game.getScore();
         js::setLeaderboardScore(saveData->bestScore);
     }
 
-    view.updateBoard();
+    if (game.isGameOver()) {
+        view.updateBoard([this]() { audio.playFail(); });
+    }
+    else if (maxLevel < game.getMaxLevel()) {
+        maxLevel = game.getMaxLevel();
+        if (maxLevel > 1) // skip first level
+            view.updateBoard([this]() { audio.playReveal(); });
+    }
+    else {
+        view.updateBoard();
+    }
+
     saveStorage->save(*saveData);
 
     if (firstAdFlag && time >= lastInterTime + INTER_COOLDOWN) {
         if (tryShowInter())
             lastInterTime = time;
     }
+
+    audio.playGo();
 }
 
 bool Application::tryShowInter() {
@@ -161,6 +176,7 @@ void Application::restartGame() {
     game.reset();
     view.updateBoardFast();
     saveStorage->save(*saveData);
+    maxLevel = 0;
 }
 
 void keyCallbackWrapper(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -259,6 +275,7 @@ bool Application::initialize() {
     ssaoPower = POWER_OCCLUSION;
 
     saveStorage->load();
+    audio.initialize();
 
     float uiScale = dpr > 1.01f ? dpr * .75f : 1.0f; // Scale 1.0 looks good on dpr == 1, but too large on dpr == 3
     ui.initialize(canvasW, canvasH, uiScale);
@@ -403,6 +420,7 @@ void Application::mainLoop() {
         saveData = new SaveData(saveStorage->getBestScore(), game.getHistoryPointer(), game.getHistoryTree());
         saveStorage->unload();
         view.updateBoardFast();
+        maxLevel = game.getMaxLevel();
     }
 
     if (!purchasesUpdateStartFlag && js::yandexInitialized()) {

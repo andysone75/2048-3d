@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -83,6 +83,40 @@
         var purchaseUpdateLockFlag;
         var purchasesUpdateFlag;
 
+        Module.loadedSounds = {};
+        Module.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        var soundUnlocked;
+        var moved;
+
+        const unlockAudio = () => {
+            if (moved) return;
+            Module.audioContext.resume().then(() => {
+                soundUnlocked = true;
+            });
+        };
+
+        window.addEventListener("touchstart", () => {
+            moved = false;
+        }, { passive: true });
+
+        window.addEventListener("touchmove", () => {
+            moved = true;
+        }, { passive: true });
+
+        window.addEventListener("touchend", () => {
+            unlockAudio();
+        }, { passive: true });
+
+        window.addEventListener("keydown", () => {
+            moved = false;
+            unlockAudio();
+        }, { passive: true });
+
+        window.addEventListener("mousedown", () => {
+            moved = false;
+            unlockAudio();
+        }, { passive: true })
+
         YaGames
             .init()
             .then(_ysdk => {
@@ -135,7 +169,7 @@
             if (player == null) return;
             var data = {
                 "save": {
-                    "data" : dataStr
+                    "data": dataStr
                 }
             };
             player.setData(data);
@@ -144,9 +178,9 @@
         function showFullscreenAdv() {
             ysdk.adv.showFullscreenAdv({
                 callbacks: {
-                    onClose: function (wasShown) {},
-                    onError: function (error) {},
-                    onOpen: function () {}
+                    onClose: function (wasShown) { },
+                    onError: function (error) { },
+                    onOpen: function () { }
                 }
             });
         }
@@ -216,6 +250,21 @@
             var stringOnHeap = _malloc(lengthBytes);
             stringToUTF8(str, stringOnHeap, lengthBytes);
             return stringOnHeap;
+        }
+
+        function loadSound(filepath) {
+            const data = FS.readFile(filepath);
+            Module.audioContext.decodeAudioData(
+                data.buffer.slice(0),
+                buffer => Module.loadedSounds[filepath] = buffer);
+        }
+
+        function playSound(filepath) {
+            if (!Module.loadedSounds[filepath] || !soundUnlocked) return;
+            const source = Module.audioContext.createBufferSource();
+            source.buffer = Module.loadedSounds[filepath];
+            source.connect(Module.audioContext.destination);
+            source.start(0);
         }
     </script>
 

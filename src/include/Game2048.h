@@ -33,12 +33,14 @@ public:
     bool goDown();
     void undoMove();
     void setHistory(const std::vector<HistoryTreeNode>& historyTree, int historyPointer);
+    bool isGameOver() const;
 
     const std::array<std::array<int, 4>, 4>& getBoard() const;
     const std::array<std::array<int, 4>, 4>& getPreviousBoard() const;
     const std::vector<TileMove>& getLastMoves() const;
     const std::vector<HistoryTreeNode>& getHistoryTree() const;
     const int& getHistoryPointer() const;
+    int getMaxLevel() const;
 
     int getScore() const;
 

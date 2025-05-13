@@ -22,6 +22,7 @@ if (EMSCRIPTEN)
     set(EMSCRIPTEN_PRELOAD_DIR "${CMAKE_SOURCE_DIR}/shaders")
     set(FONTS_DIR "${CMAKE_SOURCE_DIR}/fonts")
     set(TEXTURES_DIR "${CMAKE_SOURCE_DIR}/textures")
+    set(AUDIO_DIR "${CMAKE_SOURCE_DIR}/audio")
 
     target_link_options(index PRIVATE
         "-sUSE_GLFW=3"
@@ -32,6 +33,8 @@ if (EMSCRIPTEN)
         "--preload-file=${EMSCRIPTEN_PRELOAD_DIR}@/shaders"
         "--preload-file=${FONTS_DIR}@/fonts"
         "--preload-file=${TEXTURES_DIR}@/textures"
+        "--preload-file=${TEXTURES_DIR}@/textures"
+        "--preload-file=${AUDIO_DIR}@/audio"
         "--shell-file=${CMAKE_SOURCE_DIR}/index.html"
         # "-sUSE_WEBGL2=1"
     )
@@ -85,6 +88,9 @@ else() # Windows debug
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_SOURCE_DIR}/textures"
             "$<TARGET_FILE_DIR:index>/textures"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/audio"
+            "$<TARGET_FILE_DIR:index>/audio"
     )
 
     # target_compile_definitions(index PRIVATE RLGL_SHOW_GL_DETAILS)

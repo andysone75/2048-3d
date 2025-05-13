@@ -18,6 +18,7 @@
 #include "UI.h"
 #include "FileSaveStorage.h"
 #include "YandexSaveStorage.h"
+#include "Audio.h"
 
 //#define ENABLE_ONSCREEN_LOG
 //#define ENABLE_IMGUI
@@ -59,6 +60,8 @@ private:
     float cameraRadius = 10;
     float cameraHeight = 8;
     glm::vec3 cameraOffset = glm::vec3(1.6f, 0.0f, 1.6f);
+    
+    int maxLevel = 0;
     int moveInputs[4] = { 
         GLFW_KEY_UP, 
         GLFW_KEY_RIGHT, 
@@ -78,7 +81,6 @@ private:
     Scene& scene;
     Game2048& game;
     View2048& view;
-    SwipeDetector swipeDetector;
     std::unique_ptr<SaveStorage> saveStorage = 
 #ifndef __EMSCRIPTEN__
         std::make_unique<FileSaveStorage>();
@@ -86,6 +88,9 @@ private:
         std::make_unique<YandexSaveStorage>();
 #endif
     SaveData* saveData;
+
+    SwipeDetector swipeDetector;
+    Audio audio;
 
     RenderPassLighting lightingPass;
     RenderPassShadow shadowPass;

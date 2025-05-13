@@ -17,6 +17,8 @@ void View2048::update(float dt) {
 
     if (animationTimer <= 0.0f) {
         updateBoardFast();
+        if (animationCallback != nullptr)
+            (*animationCallback)();
         return;
     }
 
@@ -52,7 +54,15 @@ void View2048::updateBoardFast() {
     }
 }
 
+void View2048::updateBoard(const std::function<void()>& callback) {
+    updateBoard();
+    animationCallback.reset();
+    animationCallback = std::make_unique<std::function<void()>>(callback);
+}
+
 void View2048::updateBoard() {
+    animationCallback.reset();
+
     animationTargets.clear();
     animationStartPositions.clear();
     animationTargetPositions.clear();

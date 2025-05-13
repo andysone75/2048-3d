@@ -3,6 +3,8 @@
 #include "Game2048.h"
 #include "Scene.h"
 #include <stack>
+#include <functional>
+#include <memory>
 
 const float ANIMATION_TIME = .25f;
 
@@ -23,6 +25,7 @@ public:
     void update(float dt);
     void updateBoardFast();
     void updateBoard();
+    void updateBoard(const std::function<void()>& callback);
 
 private:
     const Game2048& game;
@@ -37,4 +40,5 @@ private:
 
     void poolObjects();
     View2048_Object placeObject(int level, int row, int col);
+    std::unique_ptr<std::function<void()>> animationCallback;
 };

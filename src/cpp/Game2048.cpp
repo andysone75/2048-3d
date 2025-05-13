@@ -302,6 +302,29 @@ void Game2048::setHistory(const std::vector<HistoryTreeNode>& historyTree, int h
     }
 }
 
+bool Game2048::isGameOver() const {
+    auto tryMove = [this](int dx, int dy) -> bool {
+        for (int y = 0; y < 4; ++y) {
+            for (int x = 0; x < 4; ++x) {
+                int val = board[y][x];
+                if (val == 0)
+                    return false;
+                int nx = x + dx;
+                int ny = y + dy;
+
+                if (nx >= 0 && nx < 4 && ny >= 0 && ny < 4) {
+                    if (board[ny][nx] == 0 || board[ny][nx] == val) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    };
+
+    return tryMove(0, -1) && tryMove(0, 1) && tryMove(-1, 0) && tryMove(1, 0);
+}
+
 const std::vector<TileMove>& Game2048::getLastMoves() const { return lastMoves; }
 const std::array<std::array<int, 4>, 4>& Game2048::getPreviousBoard() const { return boardBeforeMove; }
 bool Game2048::boardChanged() const { return board != boardBeforeMove; }
@@ -309,3 +332,15 @@ int Game2048::getScore() const { return score; }
 const std::array<std::array<int, 4>, 4>& Game2048::getBoard() const { return board; }
 const std::vector<HistoryTreeNode>& Game2048::getHistoryTree() const { return historyTree; }
 const int& Game2048::getHistoryPointer() const { return historyPointer; }
+
+int Game2048::getMaxLevel() const
+{
+    int maxLevel = 0;
+
+    for (size_t i = 0; i < board.size(); i++)
+        for (size_t j = 0; j < board[i].size(); j++)
+            if (board[i][j] > maxLevel)
+                maxLevel = board[i][j];
+
+    return maxLevel;
+}
