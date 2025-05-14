@@ -10,6 +10,11 @@ bool FileSaveStorage::tryLoadData() {
 
 	std::ifstream in(FILENAME);
 
+	if (!in.is_open()) {
+		setLoadCompleteFlag();
+		return false;
+	}
+
 	size_t treeSize;
 
 	in >> *bestScore;

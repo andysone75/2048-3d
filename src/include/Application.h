@@ -87,7 +87,7 @@ private:
 #else
         std::make_unique<YandexSaveStorage>();
 #endif
-    SaveData* saveData;
+	std::unique_ptr<SaveData> saveData;
 
     SwipeDetector swipeDetector;
     Audio audio;

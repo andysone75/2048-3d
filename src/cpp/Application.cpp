@@ -378,6 +378,7 @@ void Application::initGame() {
 
     game.reset();
     view.updateBoardFast();
+	saveData = std::make_unique<SaveData>(0, game.getHistoryPointer(), game.getHistoryTree());
 
     // Initialize Rendering
     int ssaoResScaled = SCALE_RES(RES_SSAO, ssaoScale);
@@ -417,8 +418,11 @@ void Application::mainLoop() {
     // Game logic
     if (saveStorage->checkLoaded()) {
         game.setHistory(saveStorage->getHistoryTree(), saveStorage->getHistoryPointer());
-        saveData = new SaveData(saveStorage->getBestScore(), game.getHistoryPointer(), game.getHistoryTree());
+
+        saveData.reset();
+        saveData = std::make_unique<SaveData>(saveStorage->getBestScore(), game.getHistoryPointer(), game.getHistoryTree());
         saveStorage->unload();
+
         view.updateBoardFast();
         maxLevel = game.getMaxLevel();
     }
@@ -570,5 +574,6 @@ void Application::mainLoop() {
 
 void Application::terminate() {
     saveStorage.reset();
+    saveData.reset();
     glfwTerminate();
 }
