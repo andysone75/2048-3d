@@ -46,6 +46,12 @@ std::u32string utf8_to_utf32(const std::string& utf8) {
     return utf32;
 }
 
+void TextRenderer::reinitialize(int canvasW, int canvasH) {
+    glm::mat4 projection = glm::ortho(0.0f, (float)canvasW, 0.0f, (float)canvasH);
+    shader.use();
+    shader.setUniformMatrix("projection", glm::value_ptr(projection));
+}
+
 bool TextRenderer::initialize(int canvasW, int canvasH) {
     shader = Shader::Load("shaders/text-vs.glsl", "shaders/text-fs.glsl", {});
     glm::mat4 projection = glm::ortho(0.0f, (float)canvasW, 0.0f, (float)canvasH);

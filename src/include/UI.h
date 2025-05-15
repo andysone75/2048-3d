@@ -73,7 +73,8 @@ struct Button {
 
 class UI {
 public:
-	void initialize(int canvasW, int canvasH, float dpr);
+	void initialize(int canvasW, int canvasH);
+	void reinitialize(int canvasW, int canvasH);
 	void render();
 	void mouseCallback(int button, int action, glm::vec2 position);
 
@@ -86,7 +87,6 @@ public:
 	inline Button& getButton(ButtonId id) { return buttons[id]; }
 
 private:
-	float dpr;
 	int canvasW, canvasH;
 	TextRenderer textRenderer;
 	ImageRenderer imageRenderer;

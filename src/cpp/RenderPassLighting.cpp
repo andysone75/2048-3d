@@ -24,7 +24,6 @@ void RenderPassLighting::initialize(GLsizei width, GLsizei height, const void* a
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	GLuint depthBuffer;
 	glGenRenderbuffers(1, &depthBuffer);
 	glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
@@ -184,4 +183,11 @@ void RenderPassLighting::render(const void* arg) const {
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glDepthMask(GL_TRUE);
 	glDepthFunc(GL_LESS);
+}
+
+void RenderPassLighting::unload() {
+	glDeleteTextures(1, &texture);
+	glDeleteRenderbuffers(1, &depthBuffer);
+	glDeleteFramebuffers(1, &fbo);
+	depthShader.unload();
 }

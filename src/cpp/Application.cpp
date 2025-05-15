@@ -169,6 +169,9 @@ void Application::mouseCallback(int button, int action) {
         }
     }
 
+    position.x = position.x / canvasW * CANVAS_W;
+    position.y = position.y / canvasH * CANVAS_H;
+
     ui.mouseCallback(button, action, position);
 }
 
@@ -189,6 +192,11 @@ void mouseCallbackWrapper(GLFWwindow* window, int button, int action, int modds)
     app->mouseCallback(button, action);
 }
 
+void framebufferSizeCallbackWrapper(GLFWwindow* window, int width, int height) {
+    auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+    app->framebufferSizeCallback(window, width, height);
+}
+
 void APIENTRY debugCallback(GLenum source, GLenum type, GLuint id,
     GLenum severity, GLsizei length,
     const GLchar* message, const void* userParam) {
@@ -205,6 +213,76 @@ float getDPR() {
     ReleaseDC(0, screen);
 #endif
     return dpr;
+}
+
+void Application::framebufferSizeCallback(GLFWwindow* window,  int width, int height) {
+    canvasW = width * dpr;
+    canvasH = height * dpr;
+
+    camera.aspect = (float)canvasW / (float)canvasH;
+
+    // Reinitialize lighting pass resolution
+    lightingPass.unload();
+
+    int shadowResScaled = SCALE_RES(RES_SHADOWMAP, shadowScale);
+    GLuint lightingPassInput[3] = {
+        shadowPass.getTexture(),
+        (GLuint)shadowResScaled,
+        positionPass.getTexture()
+    };
+
+    int ssaaWidth = canvasW * lightScale;
+    int ssaaHeight = canvasH * lightScale;
+
+    lightingPass.initialize(ssaaWidth, ssaaHeight, static_cast<const void*>(lightingPassInput));
+
+    // Reinitialize UI
+    float uiScale = (float)CANVAS_H / canvasH;
+    ui.reinitialize(canvasW * uiScale, canvasH * uiScale);
+
+    ui.getText(scoreText).position = glm::vec2(canvasW * uiScale / 2, canvasH * uiScale - 200 * uiScale);
+    ui.getText(bestScoreText).position = glm::vec2(canvasW * uiScale / 2, canvasH * uiScale - 200 * uiScale - 50);
+    ui.getImage(restartButtonImage).position = glm::vec2(5, canvasH * uiScale - 5);
+    ui.getImage(undoButtonImage).position = glm::vec2(canvasW * uiScale - 5, canvasH * uiScale - 5);
+    ui.getImage(noAdsButtonImage).position = glm::vec2(canvasW * uiScale - 15, canvasH * uiScale - 100);
+
+    Image noAdsImage = ui.getImage(noAdsButtonImage);
+    ui.getText(priceText).position = glm::vec2(
+        canvasW * uiScale - 15 - noAdsImage.width * noAdsImage.scale / 2,
+        canvasH * uiScale - 100 - noAdsImage.height * noAdsImage.scale - 20);
+
+    ui.createButton(restartButtonImage, [this]() { restartGame(); });
+    ui.createButton(undoButtonImage, [this]() { onUndoButtonClicked(); });
+    noAdsButton = ui.createButton(noAdsButtonImage, [this]() { buyNoAds(); });
+
+#ifdef ENABLE_ONSCREEN_LOG
+    int logCounter = 0;
+    int logShift = 35;
+    int logPad = 35;
+
+    TextDescription logDesc;
+    logDesc.scale = .5f;
+
+    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
+    fpsText = ui.createText(logDesc);
+
+    if (dpr != -1) {
+        logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
+        dprText = ui.createText(logDesc);
+    }
+
+    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
+    resText = ui.createText(logDesc);
+
+    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
+    shadowText = ui.createText(logDesc);
+
+    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
+    gPositionText = ui.createText(logDesc);
+
+    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
+    lightingText = ui.createText(logDesc);
+#endif
 }
 
 Application::Application(
@@ -226,13 +304,16 @@ bool Application::initialize() {
     emscripten_get_canvas_element_size("#canvas", &canvasW, &canvasH);
 #endif
 
+    dpr = getDPR();
+
+    canvasW *= dpr;
+    canvasH *= dpr;
+
     glfwInit();
     //glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    //glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     window = glfwCreateWindow(canvasW, canvasH, "City 2048", nullptr, nullptr);
     glfwMakeContextCurrent(window);
-
-    dpr = getDPR();
 
     if (dpr < 1.01f) {
         ssaoScale = 2.0f;
@@ -267,6 +348,7 @@ bool Application::initialize() {
     glfwSetWindowUserPointer(window, this);
     glfwSetKeyCallback(window, keyCallbackWrapper);
     glfwSetMouseButtonCallback(window, mouseCallbackWrapper);
+    glfwSetFramebufferSizeCallback(window, framebufferSizeCallbackWrapper);
 
     ssaoRadius = SSAO_RADIUS;
     ssaoBias = SSAO_BIAS;
@@ -277,15 +359,15 @@ bool Application::initialize() {
     saveStorage->load();
     audio.initialize();
 
-    float uiScale = dpr > 1.01f ? dpr * .75f : 1.0f; // Scale 1.0 looks good on dpr == 1, but too large on dpr == 3
-    ui.initialize(canvasW, canvasH, uiScale);
+    float uiScale = (float)CANVAS_H / canvasH;
+    ui.initialize(canvasW * uiScale, canvasH * uiScale);
 
     TextDescription scoreDesc;
-    scoreDesc.position = glm::vec2(canvasW / 2, canvasH / 2 + 350);
+    scoreDesc.position = glm::vec2(canvasW * uiScale / 2, canvasH * uiScale - 200 * uiScale);
     scoreDesc.alignmentX = 0.5f;
     scoreText = ui.createText(scoreDesc);
     
-    scoreDesc.position = glm::vec2(canvasW / 2, canvasH / 2 + 350 + 50 * uiScale);
+    scoreDesc.position = glm::vec2(canvasW * uiScale / 2, canvasH * uiScale - 200 * uiScale - 50);
     scoreDesc.scale = 0.8f;
     scoreDesc.color = glm::vec3(1) * .8f;
     bestScoreText = ui.createText(scoreDesc);
@@ -293,28 +375,28 @@ bool Application::initialize() {
     ImageDescription restartButtonDesc;
     restartButtonDesc.scale = .75f;
     restartButtonDesc.alignmentY = 1.0f;
-    restartButtonDesc.position = glm::vec2(5, canvasH - 5);
-    ImageId restartButtonImage = ui.createImage(restartButtonDesc, "textures/restart-icon.png");
+    restartButtonDesc.position = glm::vec2(5, canvasH * uiScale - 5);
+    restartButtonImage = ui.createImage(restartButtonDesc, "textures/restart-icon.png");
 
     ImageDescription undoButtonDesc;
     undoButtonDesc.scale = .75f;
     undoButtonDesc.alignmentX = 1.0f;
     undoButtonDesc.alignmentY = 1.0f;
-    undoButtonDesc.position = glm::vec2(canvasW - 5, canvasH - 5);
-    ImageId undoButtonImage = ui.createImage(undoButtonDesc, "textures/restart-icon.png");
+    undoButtonDesc.position = glm::vec2(canvasW * uiScale - 5, canvasH * uiScale - 5);
+    undoButtonImage = ui.createImage(undoButtonDesc, "textures/restart-icon.png");
 
     ImageDescription noAdsButtonDesc;
     noAdsButtonDesc.scale = .3f;
     noAdsButtonDesc.alignmentX = 1.0f;
     noAdsButtonDesc.alignmentY = 1.0f;
-    noAdsButtonDesc.position = glm::vec2(canvasW - 15, canvasH - 100);
-    ImageId noAdsButtonImage = ui.createImage(noAdsButtonDesc, "textures/no-ads-icon.png");
+    noAdsButtonDesc.position = glm::vec2(canvasW * uiScale - 15, canvasH * uiScale - 100);
+    noAdsButtonImage = ui.createImage(noAdsButtonDesc, "textures/no-ads-icon.png");
 
     TextDescription priceLabelDesc;
     Image noAdsImage = ui.getImage(noAdsButtonImage);
     priceLabelDesc.position = glm::vec2(
-        canvasW - 15 - noAdsImage.width * noAdsImage.scale / 2, 
-        canvasH - 100 - noAdsImage.height * noAdsImage.scale - 20);
+        canvasW * uiScale - 15 - noAdsImage.width * noAdsImage.scale / 2,
+        canvasH * uiScale - 100 - noAdsImage.height * noAdsImage.scale - 20);
     priceLabelDesc.alignmentX = 0.5f;
     priceLabelDesc.alignmentY = 1.0f;
     priceLabelDesc.scale = 0.5f;
@@ -332,24 +414,24 @@ bool Application::initialize() {
     TextDescription logDesc;
     logDesc.scale = .5f;
     
-    logDesc.position = glm::vec2(25.0f, canvasH - (logCounter++) * logShift - logPad);
+    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
     fpsText = ui.createText(logDesc);
     
     if (dpr != -1) {
-        logDesc.position = glm::vec2(25.0f, canvasH - (logCounter++) * logShift - logPad);
+        logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
         dprText = ui.createText(logDesc);
     }
 
-    logDesc.position = glm::vec2(25.0f, canvasH - (logCounter++) * logShift - logPad);
+    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
     resText = ui.createText(logDesc);
 
-    logDesc.position = glm::vec2(25.0f, canvasH - (logCounter++) * logShift - logPad);
+    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
     shadowText = ui.createText(logDesc);
 
-    logDesc.position = glm::vec2(25.0f, canvasH - (logCounter++) * logShift - logPad);
+    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
     gPositionText = ui.createText(logDesc);
 
-    logDesc.position = glm::vec2(25.0f, canvasH - (logCounter++) * logShift - logPad);
+    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
     lightingText = ui.createText(logDesc);
 #endif
 
@@ -575,5 +657,8 @@ void Application::mainLoop() {
 void Application::terminate() {
     saveStorage.reset();
     saveData.reset();
+    lightingPass.unload();
+    shadowPass.unload();
+    positionPass.unload();
     glfwTerminate();
 }

@@ -5,12 +5,18 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-void UI::initialize(int canvasW, int canvasH, float dpr) {
-	this->dpr = dpr;
+void UI::initialize(int canvasW, int canvasH) {
 	this->canvasW = canvasW;
 	this->canvasH = canvasH;
 	textRenderer.initialize(canvasW, canvasH);
 	imageRenderer.initialize(canvasW, canvasH);
+}
+
+void UI::reinitialize(int canvasW, int canvasH) {
+	this->canvasW = canvasW;
+	this->canvasH = canvasH;
+	textRenderer.reinitialize(canvasW, canvasH);
+	imageRenderer.reinitialize(canvasW, canvasH);
 }
 
 void UI::render() {
@@ -20,7 +26,7 @@ void UI::render() {
 			text.value,
 			text.position.x,
 			text.position.y,
-			text.scale * dpr,
+			text.scale,
 			text.color,
 			text.alignmentX);
 	}
@@ -33,7 +39,7 @@ void UI::render() {
 			image.height,
 			image.position.x,
 			image.position.y,
-			image.scale * dpr,
+			image.scale,
 			image.color,
 			image.alignmentX,
 			image.alignmentY);

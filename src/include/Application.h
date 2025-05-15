@@ -40,6 +40,7 @@ public:
     void terminate();
     void keyCallback(int key, int action);
     void mouseCallback(int button, int action);
+    void framebufferSizeCallback(GLFWwindow* window, int width, int height);
     void restartGame();
 
 private:
@@ -103,6 +104,9 @@ private:
     TextId scoreText;
     TextId priceText;
     TextId bestScoreText;
+    ImageId restartButtonImage;
+    ImageId undoButtonImage;
+    ImageId noAdsButtonImage;
     ButtonId noAdsButton;
 
 #ifdef ENABLE_ONSCREEN_LOG

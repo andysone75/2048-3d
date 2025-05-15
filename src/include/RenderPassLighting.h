@@ -16,6 +16,7 @@ public:
 
 	void initialize(GLsizei width, GLsizei height, const void* arg = nullptr) override;
 	void render(const void* arg = nullptr) const override;
+	void unload() override;
 
 private:
 	const Scene& scene;
@@ -24,6 +25,7 @@ private:
 	GLuint shadowMapTex;
 	GLuint shadowMapRes;
 	GLuint gPosition;
+	GLuint depthBuffer;
 	Shader depthShader;
 	static const int ssaoKernelSize = 128;
 	float ssaoKernelData[ssaoKernelSize * 3];

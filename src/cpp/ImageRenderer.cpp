@@ -9,6 +9,12 @@
 #include <iostream>
 #include <glm/gtc/type_ptr.hpp>
 
+void ImageRenderer::reinitialize(int canvasW, int canvasH) {
+    glm::mat4 projection = glm::ortho(0.0f, (float)canvasW, 0.0f, (float)canvasH);
+    shader.use();
+    shader.setUniformMatrix("projection", glm::value_ptr(projection));
+}
+
 void ImageRenderer::initialize(int canvasW, int canvasH) {
     shader = Shader::Load("shaders/image-vs.glsl", "shaders/image-fs.glsl");
     glm::mat4 projection = glm::ortho(0.0f, (float)canvasW, 0.0f, (float)canvasH);

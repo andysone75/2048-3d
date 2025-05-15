@@ -40,6 +40,7 @@ struct Shader {
     static Shader Load(const std::string& vsPath, const std::string& fsPath, const std::vector<std::string>& attribNames);
 
 	inline void use() const { glUseProgram(id); }
+    inline void unload() const { glDeleteProgram(id); }
 	
 	inline void setUniformMatrix(const GLchar* uniformName, const GLfloat* value, int count = 1) const { glUniformMatrix4fv(GET_UNIFORM_LOCATION(id, uniformName), count, GL_FALSE, value); }
 	inline void setUniform1f(const GLchar* uniformName, float value) const { glUniform1f(GET_UNIFORM_LOCATION(id, uniformName), value); }
@@ -110,6 +111,7 @@ public:
     };
 
     virtual void render(const void* arg = nullptr) const = 0;
+    virtual void unload() {};
 
     inline const GLuint getTexture() const { return texture; }
     inline const GLsizei getWidth() const { return width; }
