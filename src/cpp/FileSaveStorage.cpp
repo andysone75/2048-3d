@@ -32,6 +32,7 @@ bool FileSaveStorage::tryLoadData() {
 	}
 
 	setLoadCompleteFlag();
+	in.close();
 	return true;
 }
 

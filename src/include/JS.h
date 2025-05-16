@@ -9,6 +9,7 @@ namespace js {
 
 	void setLeaderboardScore(int score);
 	void gameReadyApi_ready();
+	const char* getLanguage();
 	void loadSound(const char* filepath);
 	void playSound(const char* filepath);
 

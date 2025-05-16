@@ -14,6 +14,7 @@ EM_JS(void, _showRewardedVideo, (), { showRewardedVideo(); });
 
 EM_JS(void, _setLeaderboardScore, (int score), { setLeaderboardScore(score); });
 EM_JS(void, _gameReadyApi_ready, (), { gameReadyApi_ready(); });
+EM_JS(const char*, _getLanguage, (), { return toCString(getLanguage()); });
 EM_JS(void, _loadSound, (const char* filepath), { loadSound(UTF8ToString(filepath)); });
 EM_JS(void, _playSound, (const char* filepath), { playSound(UTF8ToString(filepath)); });
 
@@ -69,6 +70,14 @@ namespace js {
 		#if __EMSCRIPTEN__
 		_gameReadyApi_ready();
 		#endif
+	}
+
+	const char* getLanguage()
+	{
+		#if __EMSCRIPTEN__
+		return _getLanguage();
+		#endif
+		return "en";
 	}
 
 	void loadSound(const char* filepath) {

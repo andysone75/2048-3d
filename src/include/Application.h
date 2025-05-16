@@ -19,6 +19,7 @@
 #include "FileSaveStorage.h"
 #include "YandexSaveStorage.h"
 #include "Audio.h"
+#include "Config.h"
 
 //#define ENABLE_ONSCREEN_LOG
 //#define ENABLE_IMGUI
@@ -92,6 +93,7 @@ private:
 
     SwipeDetector swipeDetector;
     Audio audio;
+    Config config;
 
     RenderPassLighting lightingPass;
     RenderPassShadow shadowPass;
@@ -104,10 +106,14 @@ private:
     TextId scoreText;
     TextId priceText;
     TextId bestScoreText;
+    TextId tutorialText;
     ImageId restartButtonImage;
     ImageId undoButtonImage;
     ImageId noAdsButtonImage;
-    ButtonId noAdsButton;
+    ImageId rightArrowImage;
+    ImageId leftArrowImage;
+    ImageId audioUnlockerBgImage;
+    ImageId audioUnlockerPointerImage;
 
 #ifdef ENABLE_ONSCREEN_LOG
     TextId fpsText;
@@ -127,4 +133,8 @@ private:
     void undoMove();
     void onUndoButtonClicked();
     bool tryShowInter();
+    void updateUiPositions(float dt);
+    void moveCameraRight();
+    void moveCameraLeft();
+    void audioUnlockerButtonClicked();
 };

@@ -115,7 +115,7 @@
         window.addEventListener("mousedown", () => {
             moved = false;
             unlockAudio();
-        }, { passive: true })
+        }, { passive: true });
 
         YaGames
             .init()
@@ -204,6 +204,11 @@
         function gameReadyApi_ready() {
             if (ysdk == null) return;
             ysdk.features.LoadingAPI?.ready();
+        }
+
+        function getLanguage() {
+            if (ysdk == null) return "";
+            return ysdk.environment.i18n.lang;
         }
 
         function purchase(productId) {

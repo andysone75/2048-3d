@@ -1,4 +1,4 @@
-#include "Application.h"
+﻿#include "Application.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -91,10 +91,9 @@ void Application::go(MoveDirection direction) {
     if (game.isGameOver()) {
         view.updateBoard([this]() { audio.playFail(); });
     }
-    else if (maxLevel < game.getMaxLevel()) {
+    else if (maxLevel < game.getMaxLevel() && game.getMaxLevel() > 1) {
         maxLevel = game.getMaxLevel();
-        if (maxLevel > 1) // skip first level
-            view.updateBoard([this]() { audio.playReveal(); });
+        view.updateBoard([this]() { audio.playReveal(); });
     }
     else {
         view.updateBoard();
@@ -108,6 +107,7 @@ void Application::go(MoveDirection direction) {
     }
 
     audio.playGo();
+    ui.getText(tutorialText).active = false;
 }
 
 bool Application::tryShowInter() {
@@ -117,6 +117,73 @@ bool Application::tryShowInter() {
         showed = true;
     }
     return showed;
+}
+
+void Application::updateUiPositions(float time)
+{
+    float uiScale = (float)CANVAS_H / canvasH;
+
+    ui.getText(scoreText).position = glm::vec2(canvasW * uiScale / 2, canvasH * uiScale - 200 * uiScale);
+    ui.getText(bestScoreText).position = glm::vec2(canvasW * uiScale / 2, canvasH * uiScale - 200 * uiScale - 50);
+    ui.getText(tutorialText).position = glm::vec2(canvasW * uiScale / 2, 250 * uiScale);
+    ui.getText(tutorialText).scale = glm::vec2(Utils::lerp(0.9f, 1.0f, (glm::cos(time * 3.0f) + 1.0f) * 0.5f));
+    ui.getImage(restartButtonImage).position = glm::vec2(5, canvasH * uiScale - 5);
+    ui.getImage(undoButtonImage).position = glm::vec2(canvasW * uiScale - 5, canvasH * uiScale - 5);
+    ui.getImage(noAdsButtonImage).position = glm::vec2(canvasW * uiScale - 15, canvasH * uiScale - 100);
+    ui.getImage(rightArrowImage).position = glm::vec2(canvasW / 2 * uiScale + 50, 150 * uiScale);
+    ui.getImage(leftArrowImage).position = glm::vec2(canvasW / 2 * uiScale - 50, 150 * uiScale);
+    ui.getImage(audioUnlockerBgImage).scale = glm::vec2(canvasW * uiScale / 100, canvasH * uiScale / 100);
+    ui.getImage(audioUnlockerBgImage).position = glm::vec2(canvasW * uiScale / 2, canvasH * uiScale / 2);
+    ui.getImage(audioUnlockerPointerImage).scale = glm::vec2(Utils::lerp(0.5f, .75f, (glm::cos(time * 3.0f) + 1.0f) * 0.5f));
+    ui.getImage(audioUnlockerPointerImage).position = glm::vec2(canvasW * uiScale / 2, canvasH * uiScale / 2);
+
+    Image noAdsImage = ui.getImage(noAdsButtonImage);
+    ui.getText(priceText).position = glm::vec2(
+        canvasW * uiScale - 15 - noAdsImage.width * noAdsImage.scale.x / 2,
+        canvasH * uiScale - 100 - noAdsImage.height * noAdsImage.scale.y - 20);
+
+#ifdef ENABLE_ONSCREEN_LOG
+    int logCounter = 0;
+    int logShift = 35;
+    int logPad = 35;
+
+    ui.getText(fpsText).position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
+    ui.getText(resText).position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
+    ui.getText(shadowText).position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
+    ui.getText(gPositionText).position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
+    ui.getText(lightingText).position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
+
+    if (dpr != -1) {
+        ui.getText(dprText).position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
+    }
+#endif
+}
+
+void Application::moveCameraRight()
+{
+    cameraAngleOffset -= 90.0f;
+
+    int first = moveInputs[0];
+    for (int i = 0; i < 3; ++i)
+        moveInputs[i] = moveInputs[i + 1];
+    moveInputs[3] = first;
+}
+
+void Application::moveCameraLeft()
+{
+    cameraAngleOffset += 90.0f;
+
+    int last = moveInputs[3];
+    for (int i = 3; i > 0; --i)
+        moveInputs[i] = moveInputs[i - 1];
+    moveInputs[0] = last;
+}
+
+void Application::audioUnlockerButtonClicked()
+{
+    ui.getImage(audioUnlockerBgImage).active = false;
+    ui.getImage(audioUnlockerPointerImage).active = false;
+    ui.getText(tutorialText).active = true;
 }
 
 void Application::keyCallback(int key, int action) {
@@ -136,20 +203,14 @@ void Application::keyCallback(int key, int action) {
         }
 
         if (key == GLFW_KEY_D) {
-            cameraAngleOffset -= 90.0f;
-
-            int first = moveInputs[0];
-            for (int i = 0; i < 3; ++i)
-                moveInputs[i] = moveInputs[i + 1];
-            moveInputs[3] = first;
+            moveCameraRight();
         }
         else if (key == GLFW_KEY_A) {
-            cameraAngleOffset += 90.0f;
+            moveCameraLeft();
+        }
 
-            int last = moveInputs[3];
-            for (int i = 3; i > 0; --i)
-                moveInputs[i] = moveInputs[i - 1];
-            moveInputs[0] = last;
+        if (ui.getImage(audioUnlockerBgImage).active) {
+            audioUnlockerButtonClicked();
         }
     }
 }
@@ -239,50 +300,6 @@ void Application::framebufferSizeCallback(GLFWwindow* window,  int width, int he
     // Reinitialize UI
     float uiScale = (float)CANVAS_H / canvasH;
     ui.reinitialize(canvasW * uiScale, canvasH * uiScale);
-
-    ui.getText(scoreText).position = glm::vec2(canvasW * uiScale / 2, canvasH * uiScale - 200 * uiScale);
-    ui.getText(bestScoreText).position = glm::vec2(canvasW * uiScale / 2, canvasH * uiScale - 200 * uiScale - 50);
-    ui.getImage(restartButtonImage).position = glm::vec2(5, canvasH * uiScale - 5);
-    ui.getImage(undoButtonImage).position = glm::vec2(canvasW * uiScale - 5, canvasH * uiScale - 5);
-    ui.getImage(noAdsButtonImage).position = glm::vec2(canvasW * uiScale - 15, canvasH * uiScale - 100);
-
-    Image noAdsImage = ui.getImage(noAdsButtonImage);
-    ui.getText(priceText).position = glm::vec2(
-        canvasW * uiScale - 15 - noAdsImage.width * noAdsImage.scale / 2,
-        canvasH * uiScale - 100 - noAdsImage.height * noAdsImage.scale - 20);
-
-    ui.createButton(restartButtonImage, [this]() { restartGame(); });
-    ui.createButton(undoButtonImage, [this]() { onUndoButtonClicked(); });
-    noAdsButton = ui.createButton(noAdsButtonImage, [this]() { buyNoAds(); });
-
-#ifdef ENABLE_ONSCREEN_LOG
-    int logCounter = 0;
-    int logShift = 35;
-    int logPad = 35;
-
-    TextDescription logDesc;
-    logDesc.scale = .5f;
-
-    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
-    fpsText = ui.createText(logDesc);
-
-    if (dpr != -1) {
-        logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
-        dprText = ui.createText(logDesc);
-    }
-
-    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
-    resText = ui.createText(logDesc);
-
-    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
-    shadowText = ui.createText(logDesc);
-
-    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
-    gPositionText = ui.createText(logDesc);
-
-    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
-    lightingText = ui.createText(logDesc);
-#endif
 }
 
 Application::Application(
@@ -358,53 +375,68 @@ bool Application::initialize() {
 
     saveStorage->load();
     audio.initialize();
+    config.initialize();
 
     float uiScale = (float)CANVAS_H / canvasH;
     ui.initialize(canvasW * uiScale, canvasH * uiScale);
 
     TextDescription scoreDesc;
-    scoreDesc.position = glm::vec2(canvasW * uiScale / 2, canvasH * uiScale - 200 * uiScale);
     scoreDesc.alignmentX = 0.5f;
     scoreText = ui.createText(scoreDesc);
     
-    scoreDesc.position = glm::vec2(canvasW * uiScale / 2, canvasH * uiScale - 200 * uiScale - 50);
-    scoreDesc.scale = 0.8f;
-    scoreDesc.color = glm::vec3(1) * .8f;
+    scoreDesc.scale = glm::vec2(0.8f);
+    scoreDesc.color = glm::vec4(.8f, .8f, .8f, 1.0f);
     bestScoreText = ui.createText(scoreDesc);
 
     ImageDescription restartButtonDesc;
-    restartButtonDesc.scale = .75f;
+    restartButtonDesc.scale = glm::vec2(.75f);
+    restartButtonDesc.alignmentX = 0.0f;
     restartButtonDesc.alignmentY = 1.0f;
-    restartButtonDesc.position = glm::vec2(5, canvasH * uiScale - 5);
     restartButtonImage = ui.createImage(restartButtonDesc, "textures/restart-icon.png");
 
     ImageDescription undoButtonDesc;
-    undoButtonDesc.scale = .75f;
+    undoButtonDesc.scale = glm::vec2(.75f);
     undoButtonDesc.alignmentX = 1.0f;
     undoButtonDesc.alignmentY = 1.0f;
-    undoButtonDesc.position = glm::vec2(canvasW * uiScale - 5, canvasH * uiScale - 5);
-    undoButtonImage = ui.createImage(undoButtonDesc, "textures/restart-icon.png");
+    undoButtonImage = ui.createImage(undoButtonDesc, "textures/undo-icon.png");
 
     ImageDescription noAdsButtonDesc;
-    noAdsButtonDesc.scale = .3f;
+    noAdsButtonDesc.scale = glm::vec2(.3f);
     noAdsButtonDesc.alignmentX = 1.0f;
     noAdsButtonDesc.alignmentY = 1.0f;
-    noAdsButtonDesc.position = glm::vec2(canvasW * uiScale - 15, canvasH * uiScale - 100);
     noAdsButtonImage = ui.createImage(noAdsButtonDesc, "textures/no-ads-icon.png");
 
     TextDescription priceLabelDesc;
     Image noAdsImage = ui.getImage(noAdsButtonImage);
-    priceLabelDesc.position = glm::vec2(
-        canvasW * uiScale - 15 - noAdsImage.width * noAdsImage.scale / 2,
-        canvasH * uiScale - 100 - noAdsImage.height * noAdsImage.scale - 20);
     priceLabelDesc.alignmentX = 0.5f;
     priceLabelDesc.alignmentY = 1.0f;
-    priceLabelDesc.scale = 0.5f;
+    priceLabelDesc.scale = glm::vec2(0.5f);
     priceText = ui.createText(priceLabelDesc);
+
+    ImageDescription arrowButtonDesc;
+    arrowButtonDesc.scale = glm::vec2(.7f);
+    arrowButtonDesc.color = glm::vec4(1.0f, 1.0f, 1.0f, .6f);
+    rightArrowImage = ui.createImage(arrowButtonDesc, "textures/arrow-right-icon.png");
+    leftArrowImage = ui.createImage(arrowButtonDesc, "textures/arrow-left-icon.png");
+
+    ImageDescription audioUnlockerBgDesc;
+    audioUnlockerBgDesc.color = glm::vec4(0.0f, 0.0f, 0.0f, .4f);
+    audioUnlockerBgImage = ui.createImage(audioUnlockerBgDesc);
+    ImageDescription audioUnlockerPointerDesc;
+    audioUnlockerPointerDesc.alignmentX = 0.0f;
+    audioUnlockerPointerDesc.alignmentY = 1.0f;
+    audioUnlockerPointerImage = ui.createImage(audioUnlockerPointerDesc, "textures/tutorial-pointer.png");
+
+    tutorialText = ui.createText();
+    ui.getText(tutorialText).active = false;
+    ui.getText(tutorialText).value = config.getOption("tutorial-en");
 
     ui.createButton(restartButtonImage, [this]() { restartGame(); });
     ui.createButton(undoButtonImage, [this]() { onUndoButtonClicked(); });
-    noAdsButton = ui.createButton(noAdsButtonImage, [this]() { buyNoAds(); });
+    ui.createButton(noAdsButtonImage, [this]() { buyNoAds(); });
+    ui.createButton(rightArrowImage, [this]() { moveCameraRight(); });
+    ui.createButton(leftArrowImage, [this]() { moveCameraLeft(); });
+    ui.createButton(audioUnlockerBgImage, [](){});
 
 #ifdef ENABLE_ONSCREEN_LOG
     int logCounter = 0;
@@ -514,11 +546,23 @@ void Application::mainLoop() {
         js::gameReadyApi_ready();
         purchasesUpdateStartFlag = true;
         purchasesUpdated = false;
+
+        std::string lang = std::string(js::getLanguage());
+        const char* langConfigOption =
+            lang == "ru" ||
+            lang == "be" ||
+            lang == "kk" ||
+            lang == "uk" ||
+            lang == "uz"
+            ? "tutorial-ru"
+            : "tutorial-en";
+
+        ui.getText(tutorialText).value = config.getOption(langConfigOption);
     }
 
     if (!purchasesUpdated && js::getPurchasesUpdateFlag()) {
         bool noAdsPurchased = js::hasPurchase(NO_ADS_ID);
-        ui.getImage(ui.getButton(noAdsButton).image).active = !noAdsPurchased;
+        ui.getImage(noAdsButtonImage).active = !noAdsPurchased;
         ui.getText(priceText).active = !noAdsPurchased;
         ui.getText(priceText).value = js::getProductPrice(NO_ADS_ID);
         purchasesUpdated = true;
@@ -559,7 +603,12 @@ void Application::mainLoop() {
 
     if (swipeDetector.checkSwipe()) {
         const Swipe& swipe = swipeDetector.getSwipe();
-        if (swipe.getLength() >= 10.0f && swipe.time >= 0.01f && swipe.time <= 1.0f) {
+
+        if (ui.getImage(audioUnlockerBgImage).active) {
+            if (swipe.getLength() <= 1.0f)
+                audioUnlockerButtonClicked();
+        }
+        else if (swipe.getLength() >= 10.0f && swipe.time >= 0.01f && swipe.time <= 1.0f) {
             glm::vec2 direction = swipe.getDirection();
 
             glm::vec4 dir = glm::vec4(direction.x, direction.y, 0.0f, 0.0f);
@@ -595,6 +644,8 @@ void Application::mainLoop() {
             }
         }
     }
+
+    updateUiPositions(time);
 
     // Render
     float lightingParams[5] = { ssaoRadius, ssaoBias, shadingPower, shadowPower, ssaoPower };

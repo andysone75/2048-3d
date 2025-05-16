@@ -23,6 +23,7 @@ if (EMSCRIPTEN)
     set(FONTS_DIR "${CMAKE_SOURCE_DIR}/fonts")
     set(TEXTURES_DIR "${CMAKE_SOURCE_DIR}/textures")
     set(AUDIO_DIR "${CMAKE_SOURCE_DIR}/audio")
+    set(CONFIG_DIR "${CMAKE_SOURCE_DIR}/config")
 
     target_link_options(index PRIVATE
         "-sUSE_GLFW=3"
@@ -35,6 +36,7 @@ if (EMSCRIPTEN)
         "--preload-file=${TEXTURES_DIR}@/textures"
         "--preload-file=${TEXTURES_DIR}@/textures"
         "--preload-file=${AUDIO_DIR}@/audio"
+        "--preload-file=${CONFIG_DIR}@/config"
         "--shell-file=${CMAKE_SOURCE_DIR}/index.html"
         # "-sUSE_WEBGL2=1"
     )
@@ -91,6 +93,9 @@ else() # Windows debug
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_SOURCE_DIR}/audio"
             "$<TARGET_FILE_DIR:index>/audio"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/config"
+            "$<TARGET_FILE_DIR:index>/config"
     )
 
     # target_compile_definitions(index PRIVATE RLGL_SHOW_GL_DETAILS)

@@ -35,20 +35,20 @@ void ImageRenderer::initialize(int canvasW, int canvasH) {
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // disable byte-alignment restriction
 }
 
-void ImageRenderer::draw(GLuint texture, float texW, float texH, float x, float y, float scale, glm::vec3 color, float alignmentX, float alignmentY) {
+void ImageRenderer::draw(GLuint texture, float texW, float texH, float x, float y, glm::vec2 scale, glm::vec4 color, float alignmentX, float alignmentY) const {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     shader.use();
-    shader.setUniformVec3("color", color);
+    shader.setUniformVec4("color", color);
     glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(VAO);
 
-    x -= texW * scale * alignmentX;
-    y -= texH * scale * alignmentY;
+    x -= texW * scale.x * alignmentX;
+    y -= texH * scale.y * alignmentY;
 
-    float w = texW * scale;
-    float h = texH * scale;
+    float w = texW * scale.x;
+    float h = texH * scale.y;
 
     float vertices[6][4] = {
         { x,     y + h,   0.0f, 0.0f },

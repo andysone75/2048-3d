@@ -10,41 +10,9 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <vector>
 #include <cstdint>
+#include "Utils.h"
 
 #define FONT_PATH "fonts/Nunito-Black.ttf"
-
-std::u32string utf8_to_utf32(const std::string& utf8) {
-    std::u32string utf32;
-    size_t i = 0;
-    while (i < utf8.size()) {
-        uint8_t c = utf8[i++];
-        char32_t codepoint = 0;
-
-        if ((c & 0x80) == 0x00) {  // 1-byte character (ASCII)
-            codepoint = c;
-        }
-        else if ((c & 0xE0) == 0xC0) {  // 2-byte character
-            codepoint = (c & 0x1F) << 6;
-            codepoint |= (utf8[i++] & 0x3F);
-        }
-        else if ((c & 0xF0) == 0xE0) {  // 3-byte character
-            codepoint = (c & 0x0F) << 12;
-            codepoint |= (utf8[i++] & 0x3F) << 6;
-            codepoint |= (utf8[i++] & 0x3F);
-        }
-        else if ((c & 0xF8) == 0xF0) {  // 4-byte character
-            codepoint = (c & 0x07) << 18;
-            codepoint |= (utf8[i++] & 0x3F) << 12;
-            codepoint |= (utf8[i++] & 0x3F) << 6;
-            codepoint |= (utf8[i++] & 0x3F);
-        }
-        else {
-            throw std::runtime_error("Invalid UTF-8");
-        }
-        utf32.push_back(codepoint);
-    }
-    return utf32;
-}
 
 void TextRenderer::reinitialize(int canvasW, int canvasH) {
     glm::mat4 projection = glm::ortho(0.0f, (float)canvasW, 0.0f, (float)canvasH);
@@ -113,27 +81,27 @@ bool TextRenderer::initialize(int canvasW, int canvasH) {
     return true;
 }
 
-void TextRenderer::draw(std::string text, float x, float y, float scale, glm::vec3 color, float alignmentX) {
+void TextRenderer::draw(std::string text, float x, float y, glm::vec2 scale, glm::vec4 color, float alignmentX) const {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // activate corresponding render state	
     shader.use();
-    shader.setUniformVec3("textColor", color);
+    shader.setUniformVec4("textColor", color);
     glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(VAO);
 
     // iterate through all characters
     float totalWidth = 0.0f;
     //std::string::const_iterator c;
-    std::u32string utf32 = utf8_to_utf32(text);
+    std::u32string utf32 = Utils::utf8_to_utf32(text);
 
     for (char32_t c : utf32) {
         if (characters.find(c) == characters.end())
             continue;
 
         Character ch = characters.at(c);
-        totalWidth += (ch.Advance >> 6) * scale;
+        totalWidth += (ch.Advance >> 6) * scale.x;
     }
 
     x -= totalWidth * alignmentX;
@@ -144,11 +112,11 @@ void TextRenderer::draw(std::string text, float x, float y, float scale, glm::ve
 
         Character ch = characters.at(c);
 
-        float xpos = x + ch.Bearing.x * scale;
-        float ypos = y - (ch.Size.y - ch.Bearing.y) * scale;
+        float xpos = x + ch.Bearing.x * scale.x;
+        float ypos = y - (ch.Size.y - ch.Bearing.y) * scale.y;
 
-        float w = ch.Size.x * scale;
-        float h = ch.Size.y * scale;
+        float w = ch.Size.x * scale.x;
+        float h = ch.Size.y * scale.y;
 
         // update VBO for each character
         float vertices[6][4] = {
@@ -172,7 +140,7 @@ void TextRenderer::draw(std::string text, float x, float y, float scale, glm::ve
         // render quad
         glDrawArrays(GL_TRIANGLES, 0, 6);
         // now advance cursors for next glyph (note that advance is number of 1/64 pixels)
-        x += (ch.Advance >> 6) * scale; // bitshift by 6 to get value in pixels (2^6 = 64)
+        x += (ch.Advance >> 6) * scale.x; // bitshift by 6 to get value in pixels (2^6 = 64)
     }
 
     glBindVertexArray(0);

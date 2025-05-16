@@ -20,50 +20,27 @@ void UI::reinitialize(int canvasW, int canvasH) {
 }
 
 void UI::render() {
-	for (const Text& text : texts) {
-		if (!text.active) continue;
-		textRenderer.draw(
-			text.value,
-			text.position.x,
-			text.position.y,
-			text.scale,
-			text.color,
-			text.alignmentX);
-	}
-
-	for (const Image& image : images) {
-		if (!image.active) continue;
-		imageRenderer.draw(
-			image.texture,
-			image.width,
-			image.height,
-			image.position.x,
-			image.position.y,
-			image.scale,
-			image.color,
-			image.alignmentX,
-			image.alignmentY);
-	}
+	for (const std::unique_ptr<Drawable>& drawable : drawables)
+		drawable->draw();
 }
 
 void UI::mouseCallback(int button, int action, glm::vec2 position) {
 	if (button != GLFW_MOUSE_BUTTON_LEFT || action != GLFW_RELEASE)
 		return;
 
-	for (const Button& button : buttons) {
+	for (int i = static_cast<int>(buttons.size() - 1); i >= 0; i--) {
+		const Button& button = buttons[i];
 		if (!getImage(button.image).active) continue;
-
 		const Image& image = getImage(button.image);
-		
-		glm::vec2 min = image.position;
-		min.x -= image.width * image.scale * image.alignmentX;
-		min.y -= image.height * image.scale * image.alignmentY;
-		
-		glm::vec2 max = min;
-		max.x += image.width * image.scale;
-		max.y += image.height * image.scale;
 
-		//glm::vec2 pos = position * image.scale; // with this command button clicks don't work when alignmentX == 1, but without it buttons "triggers" have sizes as if no scaling applied
+		glm::vec2 min = image.position;
+		min.x -= image.width * image.scale.x * image.alignmentX;
+		min.y -= image.height * image.scale.y * image.alignmentY;
+
+		glm::vec2 max = min;
+		max.x += image.width * image.scale.x;
+		max.y += image.height * image.scale.y;
+
 		glm::vec2 pos = position;
 		pos.y = canvasH - pos.y;
 
@@ -71,46 +48,61 @@ void UI::mouseCallback(int button, int action, glm::vec2 position) {
 			min.y <= pos.y && max.y >= pos.y)
 		{
 			button.clickCallback();
+			break;
 		}
 	}
 }
 
+TextId UI::createText() {
+	return createText(TextDescription());
+}
+
 TextId UI::createText(const TextDescription& desc) {
-	texts.emplace_back(desc);
-	return texts.size() - 1;
+	TextId id = drawables.size();
+	drawables.push_back(std::make_unique<Text>(Text(desc, textRenderer)));
+	return id;
+}
+
+ImageId UI::createImage(const char* filepath) {
+	return createImage(ImageDescription(), filepath);
 }
 
 ImageId UI::createImage(const ImageDescription& desc, const char* filepath) {
-	images.emplace_back(desc);
-	int index = images.size() - 1;
+	ImageId id = drawables.size();
+	drawables.push_back(std::make_unique<Image>(Image(desc, imageRenderer)));
+	Image& image = getImage(id);
 
-	Image& image = images[index];
-	
-	glGenTextures(1, &image.texture);
-	glBindTexture(GL_TEXTURE_2D, image.texture);
+	if (filepath != nullptr) {
+		glGenTextures(1, &image.texture);
+		glBindTexture(GL_TEXTURE_2D, image.texture);
 
-	int nrChannels;
-	unsigned char* data = stbi_load(filepath, &image.width, &image.height, &nrChannels, 0);
-	if (!data) {
-		std::cerr << "Failed to load texture: " << filepath << std::endl;
-		return -1;
+		int nrChannels;
+		unsigned char* data = stbi_load(filepath, &image.width, &image.height, &nrChannels, 0);
+		if (!data) {
+			std::cerr << "Failed to load texture: " << filepath << std::endl;
+			return -1;
+		}
+
+		GLenum format = GL_RGB;
+		if (nrChannels == 1) format = GL_RED;
+		else if (nrChannels == 3) format = GL_RGB;
+		else if (nrChannels == 4) format = GL_RGBA;
+
+		glTexImage2D(GL_TEXTURE_2D, 0, format, image.width, image.height, 0, format, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		stbi_image_free(data);
+	}
+	else {
+		image.width = 100;
+		image.height = 100;
 	}
 
-	GLenum format = GL_RGB;
-	if (nrChannels == 1) format = GL_RED;
-	else if (nrChannels == 3) format = GL_RGB;
-	else if (nrChannels == 4) format = GL_RGBA;
-
-	glTexImage2D(GL_TEXTURE_2D, 0, format, image.width, image.height, 0, format, GL_UNSIGNED_BYTE, data);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	stbi_image_free(data);
-
-	return index;
+	return id;
 }
 
 ButtonId UI::createButton(ImageId image, std::function<void()> clickCallback) {
