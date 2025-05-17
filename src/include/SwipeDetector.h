@@ -15,7 +15,10 @@ class SwipeDetector {
 public:
 	void onMouseDown(glm::vec2 position);
 	void onMouseUp(glm::vec2 position);
-	bool checkSwipe();
+	void update(glm::vec2 position);
+	bool checkSwipeMove();
+	bool checkSwipeRelease();
+	void cancelSwipe();
 
 	const Swipe& getSwipe() { return swipe; }
 

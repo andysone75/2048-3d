@@ -603,15 +603,23 @@ void Application::mainLoop() {
         ui.getText(dprText).value = "dpr: " + std::to_string(dpr);
 #endif
 
-    if (swipeDetector.checkSwipe()) {
-        const Swipe& swipe = swipeDetector.getSwipe();
+    double posX, posY;
+    glfwGetCursorPos(window, &posX, &posY);
+    glm::vec2 position = glm::vec2(posX, posY);
+    swipeDetector.update(position);
 
-        if (ui.getImage(audioUnlockerBgImage).active) {
-            if (swipe.getLength() <= 1.0f)
+    if (ui.getImage(audioUnlockerBgImage).active) {
+        if (swipeDetector.checkSwipeRelease()) {
+            if (swipeDetector.getSwipe().getLength() <= 1.0f)
                 audioUnlockerButtonClicked();
         }
-        else if (swipe.getLength() >= 10.0f && swipe.time >= 0.01f && swipe.time <= 1.0f) {
+    }
+    else if (swipeDetector.checkSwipeMove()) {
+        const Swipe& swipe = swipeDetector.getSwipe();
+
+        if (swipe.getLength() >= 10.0f && swipe.time >= 0.01f && swipe.time <= 1.0f) {
             glm::vec2 direction = swipe.getDirection();
+            swipeDetector.cancelSwipe();
 
             glm::vec4 dir = glm::vec4(direction.x, direction.y, 0.0f, 0.0f);
             glm::mat4 rotation = glm::rotate(glm::mat4(1), glm::radians(cameraAngleOffset), glm::vec3(0, 0, 1));
