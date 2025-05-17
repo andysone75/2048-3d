@@ -25,10 +25,20 @@ bool FileSaveStorage::tryLoadData() {
 
 	for (size_t i = 0; i < treeSize; ++i) {
 		HistoryTreeNode& node = historyTree->at(i);
-		in >> node.spawnX >> node.spawnY
-			>> node.indexParent >> node.indexChildUp
-			>> node.indexChildRight >> node.indexChildDown
-			>> node.indexChildLeft;
+		int p, u, r, d, l;
+
+		in >> node.spawnX >> node.spawnY;
+		in >> p;
+		in >> u;
+		in >> r;
+		in >> d;
+		in >> l;
+
+		node.indexParent = p - 1;
+		node.indexChildUp = u - 1;
+		node.indexChildRight = r - 1;
+		node.indexChildDown = d - 1;
+		node.indexChildLeft = l - 1;
 	}
 
 	setLoadCompleteFlag();
@@ -45,10 +55,10 @@ void FileSaveStorage::save(const SaveData& data) {
 	out << data.historyTree.size() << '\n';
 	for (const auto& node : data.historyTree) {
 		out << node.spawnX << ' ' << node.spawnY << ' '
-			<< node.indexParent << ' '
-			<< node.indexChildUp << ' '
-			<< node.indexChildRight << ' '
-			<< node.indexChildDown << ' '
-			<< node.indexChildLeft << '\n';
+			<< node.indexParent + 1 << ' '
+			<< node.indexChildUp + 1 << ' '
+			<< node.indexChildRight + 1 << ' '
+			<< node.indexChildDown + 1 << ' '
+			<< node.indexChildLeft + 1 << '\n';
 	}
 }
