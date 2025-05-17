@@ -3,19 +3,20 @@ attribute vec3 aPosition;
 attribute vec3 aNormal;
 attribute vec2 aUv;
 
+varying vec3 vPos;
+varying vec3 vNormal;
+varying vec3 fragLocalPos;
+varying vec2 fragTexCoord;
+
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
-varying vec3 vPos;
-varying vec3 vNormal;
-
-varying vec3 fragLocalPos;
-varying vec2 fragTexCoord;
+// lighting
+uniform vec3 lightDir;
+varying float diff;
 
 // ssao
-uniform vec2 resolution;
-varying vec2 noiseScale;
 varying mat3 normalMatrix;
 
 mat3 transpose(mat3 m) {
@@ -48,11 +49,16 @@ mat3 inverse(mat3 m) {
 
 void main() {
     vPos = vec3(model * vec4(aPosition, 1.0));
-    fragLocalPos = aPosition;
     vNormal = normalize(mat3(model) * aNormal);
+    fragLocalPos = aPosition;
     fragTexCoord = aUv;
     gl_Position = projection * view * vec4(vPos, 1.0);
+
+    // lighting
+    vec3 norm = normalize(vNormal);
+    vec3 lightDirection = normalize(-lightDir);
+    diff = max(dot(norm, lightDirection), 0.0);
+
     // ssao
-    noiseScale = resolution / 4.0;
     normalMatrix = transpose(inverse(mat3(view * model)));
 }

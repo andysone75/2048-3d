@@ -11,6 +11,7 @@ uniform mat4 projection;
 // lighting
 uniform vec3 lightDir;
 uniform float shadingPower;
+varying float diff;
 
 // shadow mapping
 uniform mat4 lightViewProj;
@@ -30,11 +31,6 @@ uniform vec3 samples[samplesCount];
 varying mat3 normalMatrix;
 
 void main() {
-    // lighting
-    vec3 norm = normalize(vNormal);
-    vec3 lightDirection = normalize(-lightDir);
-    float diff = max(dot(norm, lightDirection), 0.0);
-
     // shadow mapping
     vec4 fragPosLightSpace = lightViewProj * vec4(vPos, 1.);
 	vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
@@ -43,7 +39,7 @@ void main() {
     float curDepth = projCoords.z;
     
     float start = 0.00251623; float slope = -0.0022182;
-    float bias = start + slope * (1.0 - dot(norm, -lightDir));
+    float bias = start + slope * (1.0 - dot(normalize(vNormal), -lightDir));
     float sampleDepth = texture2D(shadowMap, sampleCoords).r;
     float shadow = curDepth - bias > sampleDepth ? 1.0 : 0.0;
 

@@ -11,6 +11,10 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
+// lighting
+uniform vec3 lightDir;
+varying float diff;
+
 // ssao
 varying mat3 normalMatrix;
 
@@ -47,6 +51,11 @@ void main() {
     vNormal = normalize(mat3(model) * aNormal);
     vColor = aColor;
     gl_Position = projection * view * vec4(vPos, 1.0);
+
+    // lighting
+    vec3 norm = normalize(vNormal);
+    vec3 lightDirection = normalize(-lightDir);
+    diff = max(dot(norm, lightDirection), 0.0);
 
     // ssao
     normalMatrix = transpose(inverse(mat3(view * model)));
