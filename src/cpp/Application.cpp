@@ -85,7 +85,8 @@ void Application::go(MoveDirection direction) {
 
     if (game.getScore() > saveData->bestScore) {
         saveData->bestScore = game.getScore();
-        js::setLeaderboardScore(saveData->bestScore);
+        if (leaderboardTimer < .0f)
+            leaderboardTimer = 1.f;
     }
 
     if (game.isGameOver()) {
@@ -99,7 +100,8 @@ void Application::go(MoveDirection direction) {
         view.updateBoard();
     }
 
-    saveStorage->save(*saveData);
+    if (saveTimer < .0f)
+        saveTimer = 2.f;
 
     if (firstAdFlag && time >= lastInterTime + INTER_COOLDOWN) {
         if (tryShowInter())
@@ -646,6 +648,24 @@ void Application::mainLoop() {
     }
 
     updateUiPositions(time);
+
+    if (saveTimer > .0f) {
+        saveTimer -= dt;
+
+        if (saveTimer <= .0f) {
+            saveStorage->save(*saveData);
+            saveTimer = -1.f;
+        }
+    }
+
+    if (leaderboardTimer > .0f) {
+        leaderboardTimer -= dt;
+
+        if (leaderboardTimer <= .0f) {
+            js::setLeaderboardScore(saveData->bestScore);
+            leaderboardTimer = -1.f;
+        }
+    }
 
     // Render
     float lightingParams[5] = { ssaoRadius, ssaoBias, shadingPower, shadowPower, ssaoPower };

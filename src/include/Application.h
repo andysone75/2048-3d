@@ -128,6 +128,8 @@ private:
     bool purchasesUpdateStartFlag = false;
     bool purchasesUpdated = false;
     float lastInterTime = 0.0f;
+    float saveTimer = -1.0f;
+    float leaderboardTimer = -1.0f;
 
     void go(MoveDirection direction);
     void undoMove();
