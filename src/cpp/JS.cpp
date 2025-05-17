@@ -11,6 +11,8 @@ EM_JS(const char*, _getPlayerData, (), { return toCString(getPlayerData()); });
 
 EM_JS(void, _showFullscreenAdv, (), { showFullscreenAdv(); });
 EM_JS(void, _showRewardedVideo, (), { showRewardedVideo(); });
+EM_JS(void, _showBanner, (), { showBanner(); });
+EM_JS(void, _hideBanner, (), { hideBanner(); });
 
 EM_JS(void, _setLeaderboardScore, (int score), { setLeaderboardScore(score); });
 EM_JS(void, _gameReadyApi_ready, (), { gameReadyApi_ready(); });
@@ -57,6 +59,18 @@ namespace js {
 	void showRewardedVideo() {
 		#if __EMSCRIPTEN__
 		_showRewardedVideo();
+		#endif
+	}
+
+	void showBanner() {
+		#if __EMSCRIPTEN__
+		_showBanner();
+		#endif
+	}
+
+	void hideBanner() {
+		#if __EMSCRIPTEN__
+		_hideBanner();
 		#endif
 	}
 

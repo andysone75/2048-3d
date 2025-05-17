@@ -195,6 +195,14 @@
             });
         }
 
+        function showBanner() {
+            ysdk.adv.showBannerAdv();
+        }
+
+        function hideBanner() {
+            ysdk.adv.hideBannerAdv();
+        }
+
         function setLeaderboardScore(score) {
             if (lb) {
                 lb.setLeaderboardScore('leaderboard', score);

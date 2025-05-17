@@ -567,6 +567,8 @@ void Application::mainLoop() {
         ui.getImage(noAdsButtonImage).active = !noAdsPurchased;
         ui.getText(priceText).active = !noAdsPurchased;
         ui.getText(priceText).value = js::getProductPrice(NO_ADS_ID);
+        if (noAdsPurchased) js::hideBanner();
+        else js::showBanner();
         purchasesUpdated = true;
     }
 

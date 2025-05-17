@@ -6,6 +6,8 @@ namespace js {
 
 	void showFullscreenAdv();
 	void showRewardedVideo();
+	void showBanner();
+	void hideBanner();
 
 	void setLeaderboardScore(int score);
 	void gameReadyApi_ready();
