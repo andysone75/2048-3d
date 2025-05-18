@@ -21,7 +21,7 @@
 #include "Audio.h"
 #include "Config.h"
 
-//#define ENABLE_ONSCREEN_LOG
+#define ENABLE_ONSCREEN_LOG
 //#define ENABLE_IMGUI
 
 #define CANVAS_W 576
@@ -41,14 +41,14 @@ public:
     void terminate();
     void keyCallback(int key, int action);
     void mouseCallback(int button, int action);
-    void framebufferSizeCallback(GLFWwindow* window, int width, int height);
+    void framebufferSizeCallback(int width, int height);
     void restartGame();
+    GLFWwindow* window;
+    float dpr = -1;
 
 private:
-    GLFWwindow* window;
     int canvasW = CANVAS_W;
     int canvasH = CANVAS_H;
-    float dpr = -1;
     float ssaoScale = 1.0f;
     float shadowScale = 1.0f;
     float lightScale = 1.0f;
@@ -130,6 +130,12 @@ private:
     float lastInterTime = 0.0f;
     float saveTimer = -1.0f;
     float leaderboardTimer = -1.0f;
+    int frameCounter = 0;
+    float frameTimer = 0.f;
+    int fps = 0.f;
+    float resizeTimer = -1.f;
+    int resizeWidth = CANVAS_W;
+    int resizeHeight = CANVAS_H;
 
     void go(MoveDirection direction);
     void undoMove();
@@ -139,4 +145,5 @@ private:
     void moveCameraRight();
     void moveCameraLeft();
     void audioUnlockerButtonClicked();
+    void resizeCanvas();
 };

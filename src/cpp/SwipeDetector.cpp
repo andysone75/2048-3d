@@ -11,6 +11,7 @@ void SwipeDetector::onMouseDown(glm::vec2 position) {
 
 void SwipeDetector::onMouseUp(glm::vec2 position) {
     dragging = false;
+    swipeReady = true;
 }
 
 void SwipeDetector::update(glm::vec2 position)
@@ -18,7 +19,6 @@ void SwipeDetector::update(glm::vec2 position)
     if (dragging) {
         swipe.end = position;
         swipe.time = static_cast<float>(glfwGetTime()) - swipe.time;
-        swipeReady = true;
     }
 }
 

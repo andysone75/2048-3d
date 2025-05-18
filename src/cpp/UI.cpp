@@ -5,16 +5,18 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-void UI::initialize(int canvasW, int canvasH) {
+void UI::initialize(int canvasW, int canvasH, float uiScale) {
 	this->canvasW = canvasW;
 	this->canvasH = canvasH;
+	this->uiScale = uiScale;
 	textRenderer.initialize(canvasW, canvasH);
 	imageRenderer.initialize(canvasW, canvasH);
 }
 
-void UI::reinitialize(int canvasW, int canvasH) {
+void UI::reinitialize(int canvasW, int canvasH, float uiScale) {
 	this->canvasW = canvasW;
 	this->canvasH = canvasH;
+	this->uiScale = uiScale;
 	textRenderer.reinitialize(canvasW, canvasH);
 	imageRenderer.reinitialize(canvasW, canvasH);
 }
@@ -42,7 +44,6 @@ void UI::mouseCallback(int button, int action, glm::vec2 position) {
 		max.y += image.height * image.scale.y;
 
 		glm::vec2 pos = position;
-		pos.y = canvasH - pos.y;
 
 		if (min.x <= pos.x && max.x >= pos.x &&
 			min.y <= pos.y && max.y >= pos.y)

@@ -109,8 +109,8 @@ struct Button {
 
 class UI {
 public:
-	void initialize(int canvasW, int canvasH);
-	void reinitialize(int canvasW, int canvasH);
+	void initialize(int canvasW, int canvasH, float uiScale);
+	void reinitialize(int canvasW, int canvasH, float uiScale);
 	void render();
 	void mouseCallback(int button, int action, glm::vec2 position);
 
@@ -126,6 +126,7 @@ public:
 
 private:
 	int canvasW, canvasH;
+	float uiScale;
 	TextRenderer textRenderer;
 	ImageRenderer imageRenderer;
 	std::vector<std::unique_ptr<Drawable>> drawables;

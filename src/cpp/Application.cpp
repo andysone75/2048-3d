@@ -149,15 +149,12 @@ void Application::updateUiPositions(float time)
     int logShift = 35;
     int logPad = 35;
 
-    ui.getText(fpsText).position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
-    ui.getText(resText).position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
-    ui.getText(shadowText).position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
-    ui.getText(gPositionText).position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
-    ui.getText(lightingText).position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
-
-    if (dpr != -1) {
-        ui.getText(dprText).position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
-    }
+    ui.getText(fpsText).position = glm::vec2(25.0f, (logCounter++) * logShift + logPad);
+    ui.getText(resText).position = glm::vec2(25.0f, (logCounter++) * logShift + logPad);
+    if (dpr != -1) ui.getText(dprText).position = glm::vec2(25.0f, (logCounter++) * logShift + logPad);
+    ui.getText(shadowText).position = glm::vec2(25.0f, (logCounter++) * logShift + logPad);
+    ui.getText(gPositionText).position = glm::vec2(25.0f, (logCounter++) * logShift + logPad);
+    ui.getText(lightingText).position = glm::vec2(25.0f, (logCounter++) * logShift + logPad);
 #endif
 }
 
@@ -232,8 +229,10 @@ void Application::mouseCallback(int button, int action) {
         }
     }
 
-    position.x = position.x / canvasW * CANVAS_W;
-    position.y = position.y / canvasH * CANVAS_H;
+    float uiScale = (float)CANVAS_H / canvasH;
+    position.y = canvasH - position.y;
+    position.x = position.x * uiScale;
+    position.y = position.y * uiScale;
 
     ui.mouseCallback(button, action, position);
 }
@@ -257,8 +256,18 @@ void mouseCallbackWrapper(GLFWwindow* window, int button, int action, int modds)
 
 void framebufferSizeCallbackWrapper(GLFWwindow* window, int width, int height) {
     auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
-    app->framebufferSizeCallback(window, width, height);
+    app->framebufferSizeCallback(width, height);
 }
+
+#ifdef __EMSCRIPTEN__
+EM_BOOL emscripten_resize_callback(int event_type, const EmscriptenUiEvent* e, void* user_data) {
+    double width, height;
+    emscripten_get_element_css_size("#canvas", &width, &height);
+    Application* app = static_cast<Application*>(user_data);
+    glfwSetWindowSize(app->window, (int)width * app->dpr, (int)height * app->dpr);
+    return EM_TRUE;
+}
+#endif
 
 void APIENTRY debugCallback(GLenum source, GLenum type, GLuint id,
     GLenum severity, GLsizei length,
@@ -278,9 +287,18 @@ float getDPR() {
     return dpr;
 }
 
-void Application::framebufferSizeCallback(GLFWwindow* window,  int width, int height) {
-    canvasW = width * dpr;
-    canvasH = height * dpr;
+void Application::framebufferSizeCallback(int width, int height) {
+    resizeTimer = .1f;
+    resizeWidth = width;
+    resizeHeight = height;
+#ifdef __EMSCRIPTEN__
+    emscripten_set_canvas_element_size("#canvas", resizeWidth, resizeHeight);
+#endif
+}
+
+void Application::resizeCanvas() {
+    canvasW = resizeWidth;
+    canvasH = resizeHeight;
 
     camera.aspect = (float)canvasW / (float)canvasH;
 
@@ -301,7 +319,7 @@ void Application::framebufferSizeCallback(GLFWwindow* window,  int width, int he
 
     // Reinitialize UI
     float uiScale = (float)CANVAS_H / canvasH;
-    ui.reinitialize(canvasW * uiScale, canvasH * uiScale);
+    ui.reinitialize(canvasW * uiScale, canvasH * uiScale, uiScale);
 }
 
 Application::Application(
@@ -320,7 +338,10 @@ Application::Application(
 
 bool Application::initialize() {
 #ifdef __EMSCRIPTEN__
-    emscripten_get_canvas_element_size("#canvas", &canvasW, &canvasH);
+    double w, h;
+    emscripten_get_element_css_size("#canvas", &w, &h);
+    canvasW = w;
+    canvasH = h;
 #endif
 
     dpr = getDPR();
@@ -367,6 +388,11 @@ bool Application::initialize() {
     glfwSetWindowUserPointer(window, this);
     glfwSetKeyCallback(window, keyCallbackWrapper);
     glfwSetMouseButtonCallback(window, mouseCallbackWrapper);
+
+#ifdef __EMSCRIPTEN__
+    emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, EM_FALSE, emscripten_resize_callback);
+#else
+#endif
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallbackWrapper);
 
     ssaoRadius = SSAO_RADIUS;
@@ -380,7 +406,7 @@ bool Application::initialize() {
     config.initialize();
 
     float uiScale = (float)CANVAS_H / canvasH;
-    ui.initialize(canvasW * uiScale, canvasH * uiScale);
+    ui.initialize(canvasW * uiScale, canvasH * uiScale, uiScale);
 
     TextDescription scoreDesc;
     scoreDesc.alignmentX = 0.5f;
@@ -446,26 +472,14 @@ bool Application::initialize() {
     int logPad = 35;
     
     TextDescription logDesc;
-    logDesc.scale = .5f;
-    
-    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
+    logDesc.scale = glm::vec2(.5f);
+    logDesc.alignmentX = 0.0f;
+
     fpsText = ui.createText(logDesc);
-    
-    if (dpr != -1) {
-        logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
-        dprText = ui.createText(logDesc);
-    }
-
-    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
+    if (dpr != -1) dprText = ui.createText(logDesc);
     resText = ui.createText(logDesc);
-
-    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
     shadowText = ui.createText(logDesc);
-
-    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
     gPositionText = ui.createText(logDesc);
-
-    logDesc.position = glm::vec2(25.0f, canvasH * uiScale - (logCounter++) * logShift - logPad);
     lightingText = ui.createText(logDesc);
 #endif
 
@@ -529,7 +543,15 @@ void Application::mainLoop() {
     time = static_cast<float>(glfwGetTime());
     float dt = time - lastTime;
     lastTime = time;
-    int fps = static_cast<int>(1.0f / dt);
+
+    frameCounter++;
+    frameTimer += dt;
+
+    if (frameTimer >= 1.f) {
+        fps = frameCounter / frameTimer;
+        frameCounter = 0;
+        frameTimer = 0.f;
+    }
 
     // Game logic
     if (saveStorage->checkLoaded()) {
@@ -674,6 +696,15 @@ void Application::mainLoop() {
         if (leaderboardTimer <= .0f) {
             js::setLeaderboardScore(saveData->bestScore);
             leaderboardTimer = -1.f;
+        }
+    }
+
+    if (resizeTimer > 0.f) {
+        resizeTimer -= dt;
+
+        if (resizeTimer <= 0.f) {
+            resizeTimer = -1.f;
+            resizeCanvas();
         }
     }
 

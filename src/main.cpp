@@ -20,7 +20,6 @@ int main() {
 
     resources.initialize();
     scene.initialize();
-
     app.initGame();
 
 #ifdef __EMSCRIPTEN__
