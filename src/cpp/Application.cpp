@@ -278,7 +278,7 @@ void APIENTRY debugCallback(GLenum source, GLenum type, GLuint id,
 float getDPR() {
     float dpr = -1;
 #ifdef __EMSCRIPTEN__
-    dpr = emscripten_run_script_int("window.devicePixelRatio");
+    dpr = emscripten_get_device_pixel_ratio();
 #else
     HDC screen = GetDC(0);
     dpr = GetDeviceCaps(screen, LOGPIXELSX) / 96;
@@ -345,6 +345,7 @@ bool Application::initialize() {
 #endif
 
     dpr = getDPR();
+    std::cout << "dpr (c++): " << dpr << std::endl;
 
     canvasW *= dpr;
     canvasH *= dpr;
