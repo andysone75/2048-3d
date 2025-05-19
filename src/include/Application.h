@@ -21,9 +21,11 @@
 #include "Audio.h"
 #include "Config.h"
 
-#define ENABLE_ONSCREEN_LOG
+//#define ENABLE_ONSCREEN_LOG
 //#define ENABLE_IMGUI
+//#define DISABLE_GAME_UI
 
+#define BUILD_INDEX 0
 #define CANVAS_W 576
 #define CANVAS_H 1024
 
@@ -49,9 +51,9 @@ public:
 private:
     int canvasW = CANVAS_W;
     int canvasH = CANVAS_H;
-    float ssaoScale = 1.0f;
+    float ssaoScale = 1.2f;
     float shadowScale = 1.0f;
-    float lightScale = 1.0f;
+    float lightScale = 2.0f;
 
     float time = 0.0f;
     float lastTime = 0.0f;
@@ -98,6 +100,8 @@ private:
     RenderPassLighting lightingPass;
     RenderPassShadow shadowPass;
     RenderPassPosition positionPass;
+    RenderPassNormal normalPass;
+    RenderPassSSAO ssaoPass;
 
     Mesh fullscreenQuadMesh;
     Shader fullscreenQuadShader;
@@ -122,6 +126,7 @@ private:
     TextId shadowText;
     TextId gPositionText;
     TextId lightingText;
+    TextId buildText;
 #endif
 
     bool firstAdFlag = false;

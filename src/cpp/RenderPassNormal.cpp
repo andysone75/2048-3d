@@ -1,4 +1,4 @@
-#include "RenderPassPosition.h"
+#include "RenderPassNormal.h"
 
 #ifdef __EMSCRIPTEN__
 #include <GLES3/gl3.h>
@@ -9,7 +9,7 @@
 #include <iostream>
 #include "glm/gtc/type_ptr.hpp"
 
-void RenderPassPosition::initialize(GLsizei width, GLsizei height, const void* arg) {
+void RenderPassNormal::initialize(GLsizei width, GLsizei height, const void* arg) {
 	RenderPass::initialize(width, height);
 
 	glGenTextures(1, &texture);
@@ -34,14 +34,14 @@ void RenderPassPosition::initialize(GLsizei width, GLsizei height, const void* a
 		std::cerr << "Framebuffer not complete!" << std::endl;
 	}
 
-	positionShader = Shader::Load("shaders/position-vs.glsl", "shaders/position-fs.glsl", {});
-	
+	shader = Shader::Load("shaders/normal-vs.glsl", "shaders/normal-fs.glsl", { "aPosition", "aNormal" });
+
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void RenderPassPosition::render(const void* arg) const {
+void RenderPassNormal::render(const void* arg) const {
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
 	glViewport(0, 0, width, height);
@@ -51,16 +51,16 @@ void RenderPassPosition::render(const void* arg) const {
 	glm::mat4 view = camera.getViewMatrix();
 	glm::mat4 proj = camera.getProjectionMatrixOrtho();
 
-	positionShader.use();
-	positionShader.setUniformMatrix("view", glm::value_ptr(view));
-	positionShader.setUniformMatrix("proj", glm::value_ptr(proj));
+	shader.use();
+	shader.setUniformMatrix("view", glm::value_ptr(view));
+	shader.setUniformMatrix("proj", glm::value_ptr(proj));
 
 	for (const int& objIndex : scene.getOpaqueObjects()) {
 		const SceneObject& obj = scene.getObject(objIndex);
 		if (!obj.isActive) continue;
 
 		glm::mat4 model = glm::translate(glm::mat4(1), obj.position) * obj.model.transform;
-		positionShader.setUniformMatrix("model", glm::value_ptr(model));
+		shader.setUniformMatrix("model", glm::value_ptr(model));
 
 		obj.model.mesh.use();
 		glDrawArrays(GL_TRIANGLES, 0, obj.model.mesh.vertexCount);

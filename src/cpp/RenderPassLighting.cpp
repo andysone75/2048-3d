@@ -16,7 +16,6 @@ void RenderPassLighting::initialize(GLsizei width, GLsizei height, const void* a
 
 	shadowMapTex = static_cast<const GLuint*>(arg)[0];
 	shadowMapRes = static_cast<const GLuint*>(arg)[1];
-	gPosition = static_cast<const GLuint*>(arg)[2];
 
 	glGenTextures(1, &texture);
 	glBindTexture(GL_TEXTURE_2D, texture);
@@ -51,40 +50,11 @@ void RenderPassLighting::initialize(GLsizei width, GLsizei height, const void* a
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	depthShader = Shader::Load("shaders/depth-vs.glsl", "shaders/depth-fs.glsl", {});
-
-	// SSAO
-	uniform_real_distribution<float> randomFloats(0.0, 1.0);
-	default_random_engine generator;
-	vector<glm::vec3> ssaoKernel;
-
-	for (int i = 0; i < ssaoKernelSize; i++)
-	{
-		glm::vec3 sample = {
-			randomFloats(generator) * 2.0f - 1.0f,
-			randomFloats(generator) * 2.0f - 1.0f,
-			randomFloats(generator)
-		};
-		sample = glm::normalize(sample);
-		sample *= randomFloats(generator);
-		float scale = (float)i / 64.0;
-		scale = Utils::lerp(0.1f, 1.0f, scale * scale);
-		ssaoKernel.push_back(sample);
-	}
-
-	for (int i = 0; i < ssaoKernelSize; i++)
-	{
-		ssaoKernelData[i * 3] = ssaoKernel[i].x;
-		ssaoKernelData[i * 3 + 1] = ssaoKernel[i].y;
-		ssaoKernelData[i * 3 + 2] = ssaoKernel[i].z;
-	}
 }
 
 void RenderPassLighting::render(const void* arg) const {
-	float ssaoRadius = static_cast<const float*>(arg)[0];
-	float ssaoBias = static_cast<const float*>(arg)[1];
-	float shadingPower = static_cast<const float*>(arg)[2];
-	float shadowPower = static_cast<const float*>(arg)[3];
-	float ssaoPower = static_cast<const float*>(arg)[4];
+	float shadingPower = static_cast<const float*>(arg)[0];
+	float shadowPower = static_cast<const float*>(arg)[1];
 
 	const vector<int>& objects = scene.getOpaqueObjects();
 
@@ -155,22 +125,13 @@ void RenderPassLighting::render(const void* arg) const {
 		shader.setUniform1f("shadingPower", shadingPower);
 
 		// shadow mapping
-		shader.setUniformMatrix("lightViewProj", glm::value_ptr(lightViewProj));
-		shader.setUniform1i("shadowMapResolution", shadowMapRes);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, shadowMapTex);
 		shader.setUniform1i("shadowMap", 0);
+
+		shader.setUniformMatrix("lightViewProj", glm::value_ptr(lightViewProj));
+		shader.setUniform1i("shadowMapResolution", shadowMapRes);
 		shader.setUniform1f("shadowPower", shadowPower);
-
-		// ssao
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, gPosition);
-		shader.setUniform1i("gPosition", 1);
-
-		glUniform3fv(glGetUniformLocation(shader.id, "samples"), (sizeof(ssaoKernelData) / sizeof(float) / 3), ssaoKernelData);
-		shader.setUniform1f("ssaoRadius", ssaoRadius);
-		shader.setUniform1f("ssaoBias", ssaoBias);
-		shader.setUniform1f("ssaoPower", ssaoPower);
 
 		// draw
 		obj.model.mesh.use();

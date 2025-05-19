@@ -24,9 +24,6 @@ private:
 	const Light& light;
 	GLuint shadowMapTex;
 	GLuint shadowMapRes;
-	GLuint gPosition;
 	GLuint depthBuffer;
 	Shader depthShader;
-	static const int ssaoKernelSize = 128;
-	float ssaoKernelData[ssaoKernelSize * 3];
 };

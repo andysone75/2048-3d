@@ -1,17 +1,19 @@
 ﻿#include "Application.h"
 
 #ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#include <emscripten/html5.h>
+    #include <emscripten.h>
+    #include <emscripten/html5.h>
 #else
-// for dpi
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-// imgui
-#include "imgui.h"
-#include "backends/imgui_impl_glfw.h"
-#include "backends/imgui_impl_opengl3.h"
+    // for dpi
+    #define NOMINMAX
+    #define WIN32_LEAN_AND_MEAN
+    #include <windows.h>
+    #ifdef ENABLE_IMGUI
+        // imgui
+        #include "imgui.h"
+        #include "backends/imgui_impl_glfw.h"
+        #include "backends/imgui_impl_opengl3.h"
+    #endif
 #endif
 
 #include <iostream>
@@ -29,22 +31,12 @@
 #define INTER_COOLDOWN 1.5f * 60.0f
 #define NO_ADS_ID "no_ads"
 
-#ifdef __EMSCRIPTEN__
-#define POWER_SHADING   0.3f;
-#define POWER_SHADOW    0.2f;
-#define POWER_OCCLUSION 1.5f;
-#else
 #define POWER_SHADING   0.15f;
 #define POWER_SHADOW    0.2f;
-#define POWER_OCCLUSION 1.5f;
-#endif
 
-#ifdef __EMSCRIPTEN__
-#define SSAO_RADIUS 0.045f;
-#else
-#define SSAO_RADIUS 0.06f;
-#endif
-#define SSAO_BIAS   0.04f;
+#define POWER_OCCLUSION 0.5f;
+#define SSAO_RADIUS 0.08f;
+#define SSAO_BIAS   0.01f;
 
 inline glm::vec3 getCameraPos(float angle, float radius, float height) {
     return { cos(glm::radians(angle)) * radius, height, sin(glm::radians(angle)) * radius };
@@ -109,7 +101,10 @@ void Application::go(MoveDirection direction) {
     }
 
     audio.playGo();
+
+#ifndef DISABLE_GAME_UI
     ui.getText(tutorialText).active = false;
+#endif
 }
 
 bool Application::tryShowInter() {
@@ -125,6 +120,7 @@ void Application::updateUiPositions(float time)
 {
     float uiScale = (float)CANVAS_H / canvasH;
 
+#ifndef DISABLE_GAME_UI
     ui.getText(scoreText).position = glm::vec2(canvasW * uiScale / 2, canvasH * uiScale - 200 * uiScale);
     ui.getText(bestScoreText).position = glm::vec2(canvasW * uiScale / 2, canvasH * uiScale - 200 * uiScale - 50);
     ui.getText(tutorialText).position = glm::vec2(canvasW * uiScale / 2, 250 * uiScale);
@@ -143,6 +139,7 @@ void Application::updateUiPositions(float time)
     ui.getText(priceText).position = glm::vec2(
         canvasW * uiScale - 15 - noAdsImage.width * noAdsImage.scale.x / 2,
         canvasH * uiScale - 100 - noAdsImage.height * noAdsImage.scale.y - 20);
+#endif
 
 #ifdef ENABLE_ONSCREEN_LOG
     int logCounter = 0;
@@ -155,6 +152,7 @@ void Application::updateUiPositions(float time)
     ui.getText(shadowText).position = glm::vec2(25.0f, (logCounter++) * logShift + logPad);
     ui.getText(gPositionText).position = glm::vec2(25.0f, (logCounter++) * logShift + logPad);
     ui.getText(lightingText).position = glm::vec2(25.0f, (logCounter++) * logShift + logPad);
+    ui.getText(buildText).position = glm::vec2(25.0f, (logCounter++) * logShift + logPad);
 #endif
 }
 
@@ -208,9 +206,11 @@ void Application::keyCallback(int key, int action) {
             moveCameraLeft();
         }
 
+#ifndef DISABLE_GAME_UI
         if (ui.getImage(audioUnlockerBgImage).active) {
             audioUnlockerButtonClicked();
         }
+#endif
     }
 }
 
@@ -245,11 +245,19 @@ void Application::restartGame() {
 }
 
 void keyCallbackWrapper(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    #if defined(ENABLE_IMGUI) && !defined(__EMSCRIPTEN__)
+    ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
+    if (ImGui::GetIO().WantCaptureKeyboard) return;
+    #endif
     auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
     app->keyCallback(key, action);
 }
 
-void mouseCallbackWrapper(GLFWwindow* window, int button, int action, int modds) {
+void mouseCallbackWrapper(GLFWwindow* window, int button, int action, int mods) {
+    #if defined(ENABLE_IMGUI) && !defined(__EMSCRIPTEN__)
+    ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+    if (ImGui::GetIO().WantCaptureMouse) return;
+    #endif
     auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
     app->mouseCallback(button, action);
 }
@@ -306,14 +314,16 @@ void Application::resizeCanvas() {
     lightingPass.unload();
 
     int shadowResScaled = SCALE_RES(RES_SHADOWMAP, shadowScale);
-    GLuint lightingPassInput[3] = {
+    GLuint lightingPassInput[2] = {
         shadowPass.getTexture(),
         (GLuint)shadowResScaled,
-        positionPass.getTexture()
     };
 
-    int ssaaWidth = canvasW * lightScale;
-    int ssaaHeight = canvasH * lightScale;
+    //int ssaaWidth = canvasW * lightScale;
+    //int ssaaHeight = canvasH * lightScale;
+
+    int ssaaWidth = 1024 * lightScale;
+    int ssaaHeight = 1024 * lightScale;
 
     lightingPass.initialize(ssaaWidth, ssaaHeight, static_cast<const void*>(lightingPassInput));
 
@@ -333,7 +343,9 @@ Application::Application(
     view(_view),
     lightingPass(_scene, camera, light),
     shadowPass( _scene, light),
-    positionPass(_scene, camera)
+    positionPass(_scene, camera),
+    normalPass(_scene, camera),
+    ssaoPass(camera)
 {}
 
 bool Application::initialize() {
@@ -345,7 +357,6 @@ bool Application::initialize() {
 #endif
 
     dpr = getDPR();
-    std::cout << "dpr (c++): " << dpr << std::endl;
 
     canvasW *= dpr;
     canvasH *= dpr;
@@ -356,15 +367,9 @@ bool Application::initialize() {
     window = glfwCreateWindow(canvasW, canvasH, "City 2048", nullptr, nullptr);
     glfwMakeContextCurrent(window);
 
-    if (dpr < 1.01f) {
-        ssaoScale = 2.0f;
-        shadowScale = 2.0f;
-        lightScale = 2.0f;
-    }
-    else if (dpr > 2.99f) {
-        ssaoScale = 1.0f;
-        shadowScale = 1.0f;
-        lightScale = 1.0f;
+    if (dpr < 1.99f) {
+        //ssaoScale = 1.2f;
+        lightScale = 4.0f;
     }
 
 #ifndef __EMSCRIPTEN__
@@ -378,10 +383,12 @@ bool Application::initialize() {
     //glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     //glDebugMessageCallback(debugCallback, nullptr);
 
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 100");
+    #ifdef ENABLE_IMGUI
+        ImGui::CreateContext();
+        ImGuiIO& io = ImGui::GetIO();
+        ImGui_ImplGlfw_InitForOpenGL(window, true);
+        ImGui_ImplOpenGL3_Init("#version 100");
+    #endif
 #else
     glfwSwapInterval(0);
 #endif
@@ -409,6 +416,7 @@ bool Application::initialize() {
     float uiScale = (float)CANVAS_H / canvasH;
     ui.initialize(canvasW * uiScale, canvasH * uiScale, uiScale);
 
+#ifndef DISABLE_GAME_UI
     TextDescription scoreDesc;
     scoreDesc.alignmentX = 0.5f;
     scoreText = ui.createText(scoreDesc);
@@ -466,6 +474,7 @@ bool Application::initialize() {
     ui.createButton(rightArrowImage, [this]() { moveCameraRight(); });
     ui.createButton(leftArrowImage, [this]() { moveCameraLeft(); });
     ui.createButton(audioUnlockerBgImage, [](){});
+#endif
 
 #ifdef ENABLE_ONSCREEN_LOG
     int logCounter = 0;
@@ -482,6 +491,7 @@ bool Application::initialize() {
     shadowText = ui.createText(logDesc);
     gPositionText = ui.createText(logDesc);
     lightingText = ui.createText(logDesc);
+    buildText = ui.createText(logDesc);
 #endif
 
     return true;
@@ -517,15 +527,25 @@ void Application::initGame() {
 
     shadowPass.initialize(shadowResScaled, shadowResScaled);
     positionPass.initialize(ssaoResScaled, ssaoResScaled);
+    normalPass.initialize(ssaoResScaled, ssaoResScaled);
 
-    GLuint lightingPassInput[3] = {
+    GLuint gBuffer[2] = {
+        positionPass.getTexture(),
+        normalPass.getTexture()
+    };
+
+    ssaoPass.initialize(ssaoResScaled, ssaoResScaled, static_cast<const void*>(gBuffer));
+
+    GLuint lightingPassInput[2] = {
         shadowPass.getTexture(), 
         (GLuint)shadowResScaled, 
-        positionPass.getTexture()
     };
     
-    int ssaaWidth = canvasW * lightScale;
-    int ssaaHeight = canvasH * lightScale;
+    //int ssaaWidth = canvasW * lightScale;
+    //int ssaaHeight = canvasH * lightScale;
+
+    int ssaaWidth = 1024 * lightScale;
+    int ssaaHeight = 1024 * lightScale;
 
     lightingPass.initialize(ssaaWidth, ssaaHeight, static_cast<const void*>(lightingPassInput));
 
@@ -581,15 +601,18 @@ void Application::mainLoop() {
             lang == "uz"
             ? "tutorial-ru"
             : "tutorial-en";
-
+#ifndef DISABLE_GAME_UI
         ui.getText(tutorialText).value = config.getOption(langConfigOption);
+#endif
     }
 
     if (!purchasesUpdated && js::getPurchasesUpdateFlag()) {
         bool noAdsPurchased = js::hasPurchase(NO_ADS_ID);
+#ifndef DISABLE_GAME_UI
         ui.getImage(noAdsButtonImage).active = !noAdsPurchased;
         ui.getText(priceText).active = !noAdsPurchased;
         ui.getText(priceText).value = js::getProductPrice(NO_ADS_ID);
+#endif
         if (noAdsPurchased) js::hideBanner();
         else js::showBanner();
         purchasesUpdated = true;
@@ -615,15 +638,18 @@ void Application::mainLoop() {
     cameraAngle = Utils::lerp(cameraAngle, cameraStartAngle + cameraAngleOffset, dt * 15.0f);
     camera.position = cameraOffset + getCameraPos(cameraAngle, cameraRadius, cameraHeight);
     view.update(dt);
+#ifndef DISABLE_GAME_UI
     ui.getText(scoreText).value = std::to_string(game.getScore());
     ui.getText(bestScoreText).value = std::to_string(saveData->bestScore);
-    
+#endif
+
 #ifdef ENABLE_ONSCREEN_LOG
     ui.getText(fpsText).value = "fps: " + std::to_string(fps);
     ui.getText(resText).value = "res: " + std::to_string(canvasW) + "x" + std::to_string(canvasH);
     ui.getText(shadowText).value = "shadow: " + std::to_string(shadowPass.getWidth()) + "x" + std::to_string(shadowPass.getHeight()) + " (" + std::to_string(shadowScale) + ")";
     ui.getText(gPositionText).value = "gPosition: " + std::to_string(positionPass.getWidth()) + "x" + std::to_string(positionPass.getHeight()) + " (" + std::to_string(ssaoScale) + ")";
     ui.getText(lightingText).value = "lighting: " + std::to_string(lightingPass.getWidth()) + "x" + std::to_string(lightingPass.getHeight()) + " (" + std::to_string(lightScale) + ")";
+    ui.getText(buildText).value = "build: " + std::to_string(BUILD_INDEX);
     if (dpr != -1)
         ui.getText(dprText).value = "dpr: " + std::to_string(dpr);
 #endif
@@ -633,7 +659,13 @@ void Application::mainLoop() {
     glm::vec2 position = glm::vec2(posX, posY);
     swipeDetector.update(position);
 
-    if (ui.getImage(audioUnlockerBgImage).active) {
+    bool isAudioUnlocked = true;
+
+#ifndef DISABLE_GAME_UI
+    isAudioUnlocked = !ui.getImage(audioUnlockerBgImage).active;
+#endif
+
+    if (!isAudioUnlocked) {
         if (swipeDetector.checkSwipeRelease()) {
             if (swipeDetector.getSwipe().getLength() <= 1.0f)
                 audioUnlockerButtonClicked();
@@ -710,25 +742,33 @@ void Application::mainLoop() {
     }
 
     // Render
-    float lightingParams[5] = { ssaoRadius, ssaoBias, shadingPower, shadowPower, ssaoPower };
+    float lightingParams[2] = { shadingPower, shadowPower };
+    float ssaoParams[3] = { ssaoRadius, ssaoBias, ssaoPower };
     shadowPass.render();
     positionPass.render();
+    normalPass.render();
+    ssaoPass.render(ssaoParams);
     lightingPass.render(lightingParams);
 
     // Drawing result
     glViewport(0, 0, canvasW, canvasH);
     fullscreenQuadShader.use();
     fullscreenQuadMesh.use();
+
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, lightingPass.getTexture());
     fullscreenQuadShader.setUniform1i("source", 0);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, ssaoPass.getTexture());
+    fullscreenQuadShader.setUniform1i("shading", 1);
+
     glDrawArrays(GL_TRIANGLES, 0, fullscreenQuadMesh.vertexCount);
 
     ui.render();
 
     // ImGui
-#ifdef ENABLE_IMGUI
-#ifndef __EMSCRIPTEN__
+#if defined(ENABLE_IMGUI) && !defined(__EMSCRIPTEN__)
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -760,7 +800,6 @@ void Application::mainLoop() {
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-#endif
 #endif
 
     glfwSwapBuffers(window);

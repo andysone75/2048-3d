@@ -19,17 +19,6 @@ uniform int shadowMapResolution;
 uniform sampler2D shadowMap;
 uniform float shadowPower;
 
-// ssao
-const int samplesCount = 128;
-
-uniform float ssaoRadius;
-uniform float ssaoBias;
-uniform float ssaoPower;
-uniform sampler2D gPosition;
-uniform vec3 samples[samplesCount];
-
-varying mat3 normalMatrix;
-
 void main() {
     // shadow mapping
     vec4 fragPosLightSpace = lightViewProj * vec4(vPos, 1.);
@@ -43,34 +32,8 @@ void main() {
     float sampleDepth = texture2D(shadowMap, sampleCoords).r;
     float shadow = curDepth - bias > sampleDepth ? 1.0 : 0.0;
 
-    // ssao
-	vec3 fragPos = (view * vec4(vPos, 1.0)).xyz;
-	vec3 normal = normalMatrix * vNormal;
-	vec3 randomVec = normalize(vec3(1, .1, 0));
-
-	vec3 tangent = normalize(randomVec - normal * dot(randomVec, normal));
-	vec3 bitangent = cross(normal, tangent);
-	mat3 TBN = mat3(tangent, bitangent, normal);
-
-	float occlusion = 0.0;
-	for (int i = 0; i < 128; i++) {
-		vec3 samp = TBN * samples[i];
-		samp = fragPos + samp * ssaoRadius;
-		
-		vec4 offset = vec4(samp, 1.0);
-		offset = projection * offset;
-		offset.xyz /= offset.w;
-		offset.xyz = offset.xyz * 0.5 + 0.5;
-
-		float sampleDepth = texture2D(gPosition, offset.xy).z;
-		float rangeCheck = smoothstep(0.0, 1.0, ssaoRadius / abs(fragPos.z - sampleDepth));
-		occlusion += (sampleDepth >= samp.z + ssaoBias ? 1.0 : 0.0) * rangeCheck;
-	}
-
-	occlusion = occlusion / float(samplesCount);
-
-    float shading = clamp((1.0 - diff) * shadingPower + shadow * shadowPower + occlusion * ssaoPower, 0.0, 1.0);
-    //float shading = clamp((1.0 - diff) * shadingPower + shadow * shadowPower, 0.0, 1.0); // Temporary remove SSAO
+    //float shading = clamp((1.0 - diff) * shadingPower + shadow * shadowPower + occlusion, 0.0, 1.0);
+    float shading = clamp((1.0 - diff) * shadingPower + shadow * shadowPower, 0.0, 1.0); // Temporary remove SSAO
     vec3 result = vColor.rgb * (1.0 - shading);
 
     gl_FragColor = vec4(result, 1.0);
