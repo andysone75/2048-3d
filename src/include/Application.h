@@ -17,7 +17,6 @@
 #include "SwipeDetector.h"
 #include "UI.h"
 #include "FileSaveStorage.h"
-#include "YandexSaveStorage.h"
 #include "Audio.h"
 #include "Config.h"
 
@@ -85,12 +84,7 @@ private:
     Scene& scene;
     Game2048& game;
     View2048& view;
-    std::unique_ptr<SaveStorage> saveStorage = 
-#ifndef __EMSCRIPTEN__
-        std::make_unique<FileSaveStorage>();
-#else
-        std::make_unique<YandexSaveStorage>();
-#endif
+    std::unique_ptr<SaveStorage> saveStorage = std::make_unique<FileSaveStorage>();
 	std::unique_ptr<SaveData> saveData;
 
     SwipeDetector swipeDetector;
@@ -108,12 +102,10 @@ private:
 
     UI ui;
     TextId scoreText;
-    TextId priceText;
     TextId bestScoreText;
     TextId tutorialText;
     ImageId restartButtonImage;
     ImageId undoButtonImage;
-    ImageId noAdsButtonImage;
     ImageId rightArrowImage;
     ImageId leftArrowImage;
     ImageId audioUnlockerBgImage;
@@ -129,12 +121,7 @@ private:
     TextId buildText;
 #endif
 
-    bool firstAdFlag = false;
-    bool purchasesUpdateStartFlag = false;
-    bool purchasesUpdated = false;
-    float lastInterTime = 0.0f;
     float saveTimer = -1.0f;
-    float leaderboardTimer = -1.0f;
     int frameCounter = 0;
     float frameTimer = 0.f;
     int fps = 0.f;
@@ -144,8 +131,6 @@ private:
 
     void go(MoveDirection direction);
     void undoMove();
-    void onUndoButtonClicked();
-    bool tryShowInter();
     void updateUiPositions(float dt);
     void moveCameraRight();
     void moveCameraLeft();

@@ -28,8 +28,6 @@
 
 #define RES_SHADOWMAP 1024
 #define RES_SSAO      1024
-#define INTER_COOLDOWN 1.5f * 60.0f
-#define NO_ADS_ID "no_ads"
 
 #define POWER_SHADING   0.15f;
 #define POWER_SHADOW    0.2f;
@@ -40,19 +38,6 @@
 
 inline glm::vec3 getCameraPos(float angle, float radius, float height) {
     return { cos(glm::radians(angle)) * radius, height, sin(glm::radians(angle)) * radius };
-}
-
-void buyNoAds() {
-    js::purchase(NO_ADS_ID);
-}
-
-void Application::onUndoButtonClicked() {
-    if (purchasesUpdated && !js::hasPurchase(NO_ADS_ID)) {
-        js::showRewardedVideo();
-    }
-    else {
-        undoMove();
-    }
 }
 
 void Application::undoMove() {
@@ -77,8 +62,6 @@ void Application::go(MoveDirection direction) {
 
     if (game.getScore() > saveData->bestScore) {
         saveData->bestScore = game.getScore();
-        if (leaderboardTimer < .0f)
-            leaderboardTimer = 1.f;
     }
 
     if (game.isGameOver()) {
@@ -95,25 +78,11 @@ void Application::go(MoveDirection direction) {
     if (saveTimer < .0f)
         saveTimer = 2.f;
 
-    if (firstAdFlag && time >= lastInterTime + INTER_COOLDOWN) {
-        if (tryShowInter())
-            lastInterTime = time;
-    }
-
     audio.playGo();
 
 #ifndef DISABLE_GAME_UI
     ui.getText(tutorialText).active = false;
 #endif
-}
-
-bool Application::tryShowInter() {
-    bool showed = false;
-    if (js::getPurchasesUpdateFlag() && !js::hasPurchase(NO_ADS_ID)) {
-        js::showFullscreenAdv();
-        showed = true;
-    }
-    return showed;
 }
 
 void Application::updateUiPositions(float time)
@@ -127,18 +96,12 @@ void Application::updateUiPositions(float time)
     ui.getText(tutorialText).scale = glm::vec2(Utils::lerp(0.9f, 1.0f, (glm::cos(time * 3.0f) + 1.0f) * 0.5f));
     ui.getImage(restartButtonImage).position = glm::vec2(5, canvasH * uiScale - 5);
     ui.getImage(undoButtonImage).position = glm::vec2(canvasW * uiScale - 5, canvasH * uiScale - 5);
-    ui.getImage(noAdsButtonImage).position = glm::vec2(canvasW * uiScale - 15, canvasH * uiScale - 100);
     ui.getImage(rightArrowImage).position = glm::vec2(canvasW / 2 * uiScale + 50, 150 * uiScale);
     ui.getImage(leftArrowImage).position = glm::vec2(canvasW / 2 * uiScale - 50, 150 * uiScale);
     ui.getImage(audioUnlockerBgImage).scale = glm::vec2(canvasW * uiScale / 100, canvasH * uiScale / 100);
     ui.getImage(audioUnlockerBgImage).position = glm::vec2(canvasW * uiScale / 2, canvasH * uiScale / 2);
     ui.getImage(audioUnlockerPointerImage).scale = glm::vec2(Utils::lerp(0.5f, .75f, (glm::cos(time * 3.0f) + 1.0f) * 0.5f));
     ui.getImage(audioUnlockerPointerImage).position = glm::vec2(canvasW * uiScale / 2, canvasH * uiScale / 2);
-
-    Image noAdsImage = ui.getImage(noAdsButtonImage);
-    ui.getText(priceText).position = glm::vec2(
-        canvasW * uiScale - 15 - noAdsImage.width * noAdsImage.scale.x / 2,
-        canvasH * uiScale - 100 - noAdsImage.height * noAdsImage.scale.y - 20);
 #endif
 
 #ifdef ENABLE_ONSCREEN_LOG
@@ -434,19 +397,6 @@ bool Application::initialize() {
     undoButtonDesc.alignmentY = 1.0f;
     undoButtonImage = ui.createImage(undoButtonDesc, "textures/undo-icon.png");
 
-    ImageDescription noAdsButtonDesc;
-    noAdsButtonDesc.scale = glm::vec2(.3f);
-    noAdsButtonDesc.alignmentX = 1.0f;
-    noAdsButtonDesc.alignmentY = 1.0f;
-    noAdsButtonImage = ui.createImage(noAdsButtonDesc, "textures/no-ads-icon.png");
-
-    TextDescription priceLabelDesc;
-    Image noAdsImage = ui.getImage(noAdsButtonImage);
-    priceLabelDesc.alignmentX = 0.5f;
-    priceLabelDesc.alignmentY = 1.0f;
-    priceLabelDesc.scale = glm::vec2(0.5f);
-    priceText = ui.createText(priceLabelDesc);
-
     ImageDescription arrowButtonDesc;
     arrowButtonDesc.scale = glm::vec2(.7f);
     arrowButtonDesc.color = glm::vec4(1.0f, 1.0f, 1.0f, .6f);
@@ -466,8 +416,7 @@ bool Application::initialize() {
     ui.getText(tutorialText).value = config.getOption("tutorial-en");
 
     ui.createButton(restartButtonImage, [this]() { restartGame(); });
-    ui.createButton(undoButtonImage, [this]() { onUndoButtonClicked(); });
-    ui.createButton(noAdsButtonImage, [this]() { buyNoAds(); });
+    ui.createButton(undoButtonImage, [this]() { undoMove(); });
     ui.createButton(rightArrowImage, [this]() { moveCameraRight(); });
     ui.createButton(leftArrowImage, [this]() { moveCameraLeft(); });
     ui.createButton(audioUnlockerBgImage, [](){});
@@ -580,54 +529,18 @@ void Application::mainLoop() {
         maxLevel = game.getMaxLevel();
     }
 
-    if (!purchasesUpdateStartFlag && js::yandexInitialized()) {
-        js::updatePurchases();
-        js::gameReadyApi_ready();
-        purchasesUpdateStartFlag = true;
-        purchasesUpdated = false;
-
-        std::string lang = std::string(js::getLanguage());
-        const char* langConfigOption =
-            lang == "ru" ||
-            lang == "be" ||
-            lang == "kk" ||
-            lang == "uk" ||
-            lang == "uz"
-            ? "tutorial-ru"
-            : "tutorial-en";
+    std::string lang = "en";
+    const char* langConfigOption =
+        lang == "ru" ||
+        lang == "be" ||
+        lang == "kk" ||
+        lang == "uk" ||
+        lang == "uz"
+        ? "tutorial-ru"
+        : "tutorial-en";
 #ifndef DISABLE_GAME_UI
-        ui.getText(tutorialText).value = config.getOption(langConfigOption);
+     ui.getText(tutorialText).value = config.getOption(langConfigOption);
 #endif
-    }
-
-    if (!purchasesUpdated && js::getPurchasesUpdateFlag()) {
-        bool noAdsPurchased = js::hasPurchase(NO_ADS_ID);
-#ifndef DISABLE_GAME_UI
-        ui.getImage(noAdsButtonImage).active = !noAdsPurchased;
-        ui.getText(priceText).active = !noAdsPurchased;
-        ui.getText(priceText).value = js::getProductPrice(NO_ADS_ID);
-#endif
-        if (noAdsPurchased) js::hideBanner();
-        else js::showBanner();
-        purchasesUpdated = true;
-    }
-
-    if (js::getPurchaseCompleteFlag()) {
-        js::resetPurchaseCompleteFlag();
-        js::resetPurchasesUpdateFlag();
-        js::updatePurchases();
-        purchasesUpdated = false;
-    }
-
-    if (!firstAdFlag)
-        firstAdFlag = tryShowInter();
-
-    if (js::getRewardedAdCloseFlag()) {
-        if (js::getRewardedAdCompleteFlag()) {
-            undoMove();
-        }
-        js::resetFlagsRewardedAd();
-    }
 
     cameraAngle = Utils::lerp(cameraAngle, cameraStartAngle + cameraAngleOffset, dt * 15.0f);
     camera.position = cameraOffset + getCameraPos(cameraAngle, cameraRadius, cameraHeight);
@@ -714,15 +627,6 @@ void Application::mainLoop() {
         if (saveTimer <= .0f) {
             saveStorage->save(*saveData);
             saveTimer = -1.f;
-        }
-    }
-
-    if (leaderboardTimer > .0f) {
-        leaderboardTimer -= dt;
-
-        if (leaderboardTimer <= .0f) {
-            js::setLeaderboardScore(saveData->bestScore);
-            leaderboardTimer = -1.f;
         }
     }
 
