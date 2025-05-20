@@ -319,11 +319,8 @@ void Application::resizeCanvas() {
         (GLuint)shadowResScaled,
     };
 
-    //int ssaaWidth = canvasW * lightScale;
-    //int ssaaHeight = canvasH * lightScale;
-
-    int ssaaWidth = 1024 * lightScale;
-    int ssaaHeight = 1024 * lightScale;
+    int ssaaWidth = canvasW * lightScale;
+    int ssaaHeight = canvasH * lightScale;
 
     lightingPass.initialize(ssaaWidth, ssaaHeight, static_cast<const void*>(lightingPassInput));
 
@@ -369,7 +366,7 @@ bool Application::initialize() {
 
     if (dpr < 1.99f) {
         //ssaoScale = 1.2f;
-        lightScale = 4.0f;
+        lightScale = 2.0f;
     }
 
 #ifndef __EMSCRIPTEN__
@@ -541,11 +538,8 @@ void Application::initGame() {
         (GLuint)shadowResScaled, 
     };
     
-    //int ssaaWidth = canvasW * lightScale;
-    //int ssaaHeight = canvasH * lightScale;
-
-    int ssaaWidth = 1024 * lightScale;
-    int ssaaHeight = 1024 * lightScale;
+    int ssaaWidth = canvasW * lightScale;
+    int ssaaHeight = canvasH * lightScale;
 
     lightingPass.initialize(ssaaWidth, ssaaHeight, static_cast<const void*>(lightingPassInput));
 
