@@ -20,7 +20,7 @@
 #include "Audio.h"
 #include "Config.h"
 
-//#define ENABLE_ONSCREEN_LOG
+#define ENABLE_ONSCREEN_LOG
 //#define ENABLE_IMGUI
 //#define DISABLE_GAME_UI
 
@@ -112,6 +112,8 @@ private:
     ImageId audioUnlockerPointerImage;
 
 #ifdef ENABLE_ONSCREEN_LOG
+    TextId gameLoopSpeedText;
+    TextId renderLoopSpeedText;
     TextId fpsText;
     TextId dprText;
     TextId resText;
@@ -128,6 +130,10 @@ private:
     float resizeTimer = -1.f;
     int resizeWidth = CANVAS_W;
     int resizeHeight = CANVAS_H;
+    long long gameLoopDuration = 0;
+    long long renderLoopDuration = 0;
+    double gameLoopDurationAvg = 0;
+    double renderLoopDurationAvg = 0;
 
     void go(MoveDirection direction);
     void undoMove();

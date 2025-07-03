@@ -23,6 +23,7 @@
 
 #include "Utils.h"
 #include "JS.h"
+#include <chrono>
 
 #define SCALE_RES(res, scale) static_cast<int>((float)res * scale);
 
@@ -109,6 +110,8 @@ void Application::updateUiPositions(float time)
     int logShift = 35;
     int logPad = 35;
 
+    ui.getText(gameLoopSpeedText).position = glm::vec2(25.0f, (logCounter++) * logShift + logPad);
+    ui.getText(renderLoopSpeedText).position = glm::vec2(25.0f, (logCounter++) * logShift + logPad);
     ui.getText(fpsText).position = glm::vec2(25.0f, (logCounter++) * logShift + logPad);
     ui.getText(resText).position = glm::vec2(25.0f, (logCounter++) * logShift + logPad);
     if (dpr != -1) ui.getText(dprText).position = glm::vec2(25.0f, (logCounter++) * logShift + logPad);
@@ -349,6 +352,8 @@ bool Application::initialize() {
         ImGui_ImplGlfw_InitForOpenGL(window, true);
         ImGui_ImplOpenGL3_Init("#version 100");
     #endif
+
+    glfwSwapInterval(0);
 #else
     glfwSwapInterval(0);
 #endif
@@ -431,6 +436,8 @@ bool Application::initialize() {
     logDesc.scale = glm::vec2(.5f);
     logDesc.alignmentX = 0.0f;
 
+    gameLoopSpeedText = ui.createText(logDesc);
+    renderLoopSpeedText = ui.createText(logDesc);
     fpsText = ui.createText(logDesc);
     if (dpr != -1) dprText = ui.createText(logDesc);
     resText = ui.createText(logDesc);
@@ -454,7 +461,7 @@ void Application::initGame() {
     cameraAngle = cameraStartAngle;
 
     glm::vec3 lightCamOffset = cameraOffset + glm::vec3(0, 1, 0) * 0.9f;
-    glm::vec3 lightDir = glm::vec3(-0.32f, -0.77f, 0.56);
+    glm::vec3 lightDir = glm::vec3(-0.32f, -0.77f, 0.56f);
     light.target = lightCamOffset;
     light.up = glm::vec3(0, 1, 0);
     light.position = lightCamOffset - lightDir * 3.0f;
@@ -504,6 +511,7 @@ bool Application::isRunning() {
 }
 
 void Application::mainLoop() {
+    // Timings
     time = static_cast<float>(glfwGetTime());
     float dt = time - lastTime;
     lastTime = time;
@@ -513,11 +521,19 @@ void Application::mainLoop() {
 
     if (frameTimer >= 1.f) {
         fps = frameCounter / frameTimer;
+
+        gameLoopDurationAvg = (double)gameLoopDuration / frameCounter / 1e6;
+        renderLoopDurationAvg = (double)renderLoopDuration / frameCounter / 1e6;
+        gameLoopDuration = 0;
+        renderLoopDuration = 0;
+
         frameCounter = 0;
         frameTimer = 0.f;
     }
 
     // Game logic
+    auto start = std::chrono::steady_clock::now();
+
     if (saveStorage->checkLoaded()) {
         game.setHistory(saveStorage->getHistoryTree(), saveStorage->getHistoryPointer());
 
@@ -551,6 +567,8 @@ void Application::mainLoop() {
 #endif
 
 #ifdef ENABLE_ONSCREEN_LOG
+    ui.getText(gameLoopSpeedText).value = "game (ms): " + std::to_string(gameLoopDurationAvg);
+    ui.getText(renderLoopSpeedText).value = "render (ms): " + std::to_string(renderLoopDurationAvg);
     ui.getText(fpsText).value = "fps: " + std::to_string(fps);
     ui.getText(resText).value = "res: " + std::to_string(canvasW) + "x" + std::to_string(canvasH);
     ui.getText(shadowText).value = "shadow: " + std::to_string(shadowPass.getWidth()) + "x" + std::to_string(shadowPass.getHeight()) + " (" + std::to_string(shadowScale) + ")";
@@ -639,6 +657,10 @@ void Application::mainLoop() {
         }
     }
 
+    auto end = std::chrono::steady_clock::now();
+    gameLoopDuration += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    start = std::chrono::steady_clock::now();
+
     // Render
     float lightingParams[2] = { shadingPower, shadowPower };
     float ssaoParams[3] = { ssaoRadius, ssaoBias, ssaoPower };
@@ -702,6 +724,9 @@ void Application::mainLoop() {
 
     glfwSwapBuffers(window);
     glfwPollEvents();
+
+    end = std::chrono::steady_clock::now();
+    renderLoopDuration += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
 }
 
 void Application::terminate() {

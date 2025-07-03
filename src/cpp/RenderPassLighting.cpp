@@ -121,7 +121,8 @@ void RenderPassLighting::render(const void* arg) const {
 		shader.setUniform1f("time", static_cast<float>(glfwGetTime()));
 		
 		// lighting
-		shader.setUniformVec3("lightDir", light.getDirection());
+		glm::vec3 lightDir = light.getDirection();
+		shader.setUniformVec3("lightDir", lightDir);
 		shader.setUniform1f("shadingPower", shadingPower);
 
 		// shadow mapping
